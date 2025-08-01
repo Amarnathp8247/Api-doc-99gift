@@ -1,0 +1,144 @@
+<app-sidebar></app-sidebar>
+<!-- Login API section -->
+<div class="documentation-container">
+  <div class="main-content">
+    <section id="login" class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/user/login-Corporate/merchant</span>
+      </div>
+      <h2 class="endpoint-title">Login API</h2>
+      <div class="endpoint-description">
+        <p>
+          Authenticate corporate merchants with their mobile number, password,
+          and a 2FA authentication code. Successful authentication returns a JWT
+          token for subsequent API calls.
+        </p>
+      </div>
+
+      <h3 class="section-title">Request Attributes</h3>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+          <th>Sample</th>
+        </tr>
+        <tr>
+          <td>mobile</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>Registered mobile number with country code (without + sign)</td>
+          <td>"9182XXXXX94"</td>
+        </tr>
+        <tr>
+          <td>password</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>Account password</td>
+          <td>"test123"</td>
+        </tr>
+        <tr>
+          <td>authcode</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>6-digit 2FA code from authenticator app</td>
+          <td>"128636"</td>
+        </tr>
+      </table>
+
+      <div class="code-section">
+        <h3 class="section-title">Example Request</h3>
+        <div class="code-editor">
+          <div class="editor-header">
+            <div class="editor-title">LOGIN REQUEST</div>
+            <div class="editor-actions">
+              <button class="try-btn" (click)="tryApiRequest('login')">
+                Try It
+              </button>
+              <button
+                class="copy-btn"
+                data-copy="login-curl"
+                (click)="copyCode('login-curl')"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+          <div class="tab-buttons">
+            <button
+              class="tab-btn"
+              [class.active]="isEndpointActiveTab('login', 'login-curl')"
+              (click)="setEndpointActiveTab('login', 'login-curl')"
+            >
+              cURL
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="isEndpointActiveTab('login', 'login-js')"
+              (click)="setEndpointActiveTab('login', 'login-js')"
+            >
+              JavaScript
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="isEndpointActiveTab('login', 'login-python')"
+              (click)="setEndpointActiveTab('login', 'login-python')"
+            >
+              Python
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="isEndpointActiveTab('login', 'login-php')"
+              (click)="setEndpointActiveTab('login', 'login-php')"
+            >
+              PHP
+            </button>
+          </div>
+          <div class="code-content">
+            <!-- cURL -->
+            <pre
+              id="login-curl"
+              class="tab-content"
+              [class.active]="isEndpointActiveTab('login', 'login-curl')"
+            ><code class="language-bash">{{codeExamples.login.curl}}</code></pre>
+
+            <!-- JavaScript -->
+            <pre
+              id="login-js"
+              class="tab-content"
+              [class.active]="isEndpointActiveTab('login', 'login-js')"
+            ><code class="language-javascript">{{codeExamples.login.js}}</code></pre>
+
+            <!-- Python -->
+            <pre
+              id="login-python"
+              class="tab-content"
+              [class.active]="isEndpointActiveTab('login', 'login-python')"
+            ><code class="language-python">{{codeExamples.login.python}}</code></pre>
+
+            <!-- PHP -->
+            <pre
+              id="login-php"
+              class="tab-content"
+              [class.active]="isEndpointActiveTab('login', 'login-php')"
+            ><code class="language-php">{{codeExamples.login.php}}</code></pre>
+          </div>
+        </div>
+
+        <h3 class="section-title">Response Sample</h3>
+        <div class="response-sample">
+          <pre
+            [innerHTML]="
+              formatJson(
+                apiResponses['login'] ||
+                  'Execute the request to see the response'
+              )
+            "
+          ></pre>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

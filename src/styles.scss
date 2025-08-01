@@ -41,6 +41,7 @@
   .documentation-container {
     display: flex;
     min-height: 100vh;
+    background-color: var(--bg-color);
   }
   
   .main-content {
@@ -313,26 +314,32 @@
   }
   
   .editor-actions button {
-    background-color: transparent;
     border: none;
-    color: var(--gray-extra-light);
+    color: white;
     font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.4rem 0.8rem;
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .editor-actions button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    transition: all 0.2s;
   }
   
   .editor-actions .try-btn {
     background-color: var(--primary-color);
+    &:hover {
+      background-color: #3182ce;
+    }
   }
   
-  .editor-actions .copy-btn {
-    background-color: var(--gray-dark);
+  .editor-actions .reset-btn {
+    background-color: #718096;
+    &:hover {
+      background-color: #4a5568;
+    }
+  }
+  
+  .editor-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
   
   .tab-buttons {
@@ -364,37 +371,65 @@
   
   .code-content {
     background-color: var(--white);
-    padding: 0;
+    height: 300px;
   }
   
-  .tab-content {
-    display: none;
-    margin: 0;
-    padding: 0;
-  }
-  
-  .tab-content.active {
-    display: block;
-  }
-  
-  .code-content code {
-    display: block;
-    padding: 1rem;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    overflow-x: auto;
+  .editor-container {
+    height: 100%;
+    width: 100%;
   }
   
   .response-sample {
     background-color: #f7fafc;
     border-radius: 8px;
-    padding: 1rem;
     border: 1px solid var(--gray-extra-light);
+    overflow: hidden;
+  }
+  
+  .response-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--dark-color);
+    padding: 0.5rem 1rem;
+  }
+  
+  .response-status {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+  
+  .response-status.success {
+    background-color: #38a169;
+  }
+  
+  .response-status.error {
+    background-color: #e53e3e;
+  }
+  
+  .copy-btn {
+    background-color: #4a5568;
+    border: none;
+    color: white;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .copy-btn:hover {
+    background-color: #2d3748;
+  }
+  
+  .response-content {
+    padding: 1rem;
     overflow-x: auto;
   }
   
-  .response-sample pre {
+  .response-content pre {
     margin: 0;
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.9rem;
@@ -403,25 +438,12 @@
     color: var(--gray-dark);
   }
   
-  .encryption-demo-result {
-    margin-top: 1.5rem;
+  /* Monaco Editor Overrides */
+  .monaco-editor .margin {
+    background-color: #f7fafc !important;
   }
   
-  /* Footer Styles */
-  .footer {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--gray-extra-light);
-    text-align: center;
-    color: var(--gray-medium);
-    font-size: 0.9rem;
-  }
-  
-  /* Highlight.js theme overrides */
-  .hljs {
-    background: transparent !important;
-  }
-  
+  /* Token colors for JSON highlighting */
   .token.key {
     color: #3182ce;
   }
@@ -442,7 +464,17 @@
     color: #e53e3e;
   }
   
-  /* Mobile Menu Toggle (hidden by default) */
+  /* Footer Styles */
+  .footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--gray-extra-light);
+    text-align: center;
+    color: var(--gray-medium);
+    font-size: 0.9rem;
+  }
+  
+  /* Mobile Menu Toggle */
   .mobile-menu-toggle {
     display: none;
     position: fixed;
