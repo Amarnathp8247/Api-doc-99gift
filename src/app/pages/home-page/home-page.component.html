@@ -1,0 +1,307 @@
+<app-sidebar></app-sidebar>
+<div class="documentation-container">
+  <div class="main-content">
+    <!-- Overview section -->
+    <section id="overview" class="api-header">
+      <h1 class="api-title">99Gift E-Commerce API Documentation</h1>
+      <p class="api-description">
+        Welcome to the 99Gift Platform API documentation. This comprehensive API
+        suite enables seamless integration with our e-commerce platform,
+        providing endpoints for authentication, product management, order
+        processing, and account operations.
+      </p>
+
+      <div class="flow-diagram">
+        <h3 class="section-title">API Integration Flow</h3>
+        <div class="flow-step">
+          <div class="flow-number">1</div>
+          <div class="flow-content">
+            <strong>Authentication</strong> - Obtain JWT token via Login API
+            with 2FA authentication
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-number">2</div>
+          <div class="flow-content">
+            <strong>Product Catalog</strong> - Browse products using List and
+            Search APIs
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-number">3</div>
+          <div class="flow-content">
+            <strong>Order Placement</strong> - Create orders with encrypted
+            payload for sensitive data
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-number">4</div>
+          <div class="flow-content">
+            <strong>Order Management</strong> - Track order status and retrieve
+            voucher details
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Authentication section -->
+    <section id="authentication" class="endpoint">
+      <h2 class="endpoint-title">Authentication</h2>
+      <div class="endpoint-description">
+        <p>
+          The 99Gift API uses JWT (JSON Web Tokens) for authentication. After
+          successful login and OTP verification, you will receive a JWT token
+          that must be included in the Authorization header of all subsequent
+          requests.
+        </p>
+      </div>
+
+      <h3 class="section-title">Request Headers</h3>
+      <table>
+        <tr>
+          <th>Header</th>
+          <th>Required</th>
+          <th>Description</th>
+          <th>Example</th>
+        </tr>
+        <tr>
+          <td>Authorization</td>
+          <td>Yes</td>
+          <td>Bearer token received after authentication</td>
+          <td>Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</td>
+        </tr>
+        <tr>
+          <td>Content-Type</td>
+          <td>Yes</td>
+          <td>Should be application/json for most requests</td>
+          <td>application/json</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Encryption section -->
+    <section id="encryption" class="endpoint">
+      <h2 class="endpoint-title">CryptoJS Encryption</h2>
+      <div class="endpoint-description">
+        <p>
+          For enhanced security, sensitive operations (particularly order
+          placement) require payload encryption using AES-256-CBC encryption
+          before being sent to our API.
+        </p>
+
+        <h3 class="section-title">Encryption Requirements</h3>
+        <ul style="margin: 15px 0 15px 20px">
+          <li>
+            <strong>Key:</strong> 32-character API secret provided during
+            production onboarding
+          </li>
+          <li>
+            <strong>IV:</strong> 16-character initialization vector (should be
+            random for each request)
+          </li>
+          <li><strong>Algorithm:</strong> AES-256-CBC</li>
+          <li><strong>Padding:</strong> PKCS7</li>
+        </ul>
+      </div>
+
+      <div class="code-section">
+        <h3 class="section-title">Encryption Implementation</h3>
+        <div class="code-editor">
+          <div class="editor-header">
+            <div class="editor-title">CRYPTOJS ENCRYPTION</div>
+            <div class="editor-actions">
+              <button class="try-btn" (click)="runEncryptionDemo()">Try It</button>
+              <button class="copy-btn" data-copy="encryption-js" (click)="copyCode('encryption-js')">Copy</button>
+            </div>
+          </div>
+          <div class="tab-buttons">
+            <button class="tab-btn" [class.active]="isActiveTab('encryption-js')" (click)="setActiveTab('encryption-js')">
+              JavaScript
+            </button>
+            <button class="tab-btn" [class.active]="isActiveTab('encryption-python')" (click)="setActiveTab('encryption-python')">
+              Python
+            </button>
+            <button class="tab-btn" [class.active]="isActiveTab('encryption-php')" (click)="setActiveTab('encryption-php')">
+              PHP
+            </button>
+            <button class="tab-btn" [class.active]="isActiveTab('encryption-java')" (click)="setActiveTab('encryption-java')">
+              Java
+            </button>
+          </div>
+          <div class="code-content">
+            <!-- JavaScript -->
+            <pre id="encryption-js" class="tab-content" [class.active]="isActiveTab('encryption-js')"><code class="language-javascript">{{codeExamples.encryption.js}}</code></pre>
+          
+            <!-- Python -->
+            <pre id="encryption-python" class="tab-content" [class.active]="isActiveTab('encryption-python')"><code class="language-python">{{codeExamples.encryption.python}}</code></pre>
+          
+            <!-- PHP -->
+            <pre id="encryption-php" class="tab-content" [class.active]="isActiveTab('encryption-php')"><code class="language-php">{{codeExamples.encryption.php}}</code></pre>
+          
+            <!-- Java -->
+            <pre id="encryption-java" class="tab-content" [class.active]="isActiveTab('encryption-java')"><code class="language-java">{{codeExamples.encryption.java}}</code></pre>
+          </div>
+        </div>
+
+        <div class="encryption-demo-result" *ngIf="showEncryptionResult">
+          <h3 class="section-title">Encryption Result</h3>
+          <div class="response-sample">
+            <pre [innerHTML]="formatJson(encryptionResult)"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Login API section -->
+    <section id="login" class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/user/login-Corporate/merchant</span>
+      </div>
+      <h2 class="endpoint-title">Login API</h2>
+      <div class="endpoint-description">
+        <p>
+          Authenticate corporate merchants with their mobile number, password,
+          and a 2FA authentication code. Successful authentication returns a JWT
+          token for subsequent API calls.
+        </p>
+      </div>
+
+      <h3 class="section-title">Request Attributes</h3>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+          <th>Sample</th>
+        </tr>
+        <tr>
+          <td>mobile</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>Registered mobile number with country code (without + sign)</td>
+          <td>"9182XXXXX94"</td>
+        </tr>
+        <tr>
+          <td>password</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>Account password</td>
+          <td>"test123"</td>
+        </tr>
+        <tr>
+          <td>authcode</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>6-digit 2FA code from authenticator app</td>
+          <td>"128636"</td>
+        </tr>
+      </table>
+
+      <div class="code-section">
+        <h3 class="section-title">Example Request</h3>
+        <div class="code-editor">
+          <div class="editor-header">
+            <div class="editor-title">LOGIN REQUEST</div>
+            <div class="editor-actions">
+              <button class="try-btn" (click)="tryApiRequest('login')">Try It</button>
+              <button class="copy-btn" data-copy="login-curl" (click)="copyCode('login-curl')">Copy</button>
+            </div>
+          </div>
+          <div class="tab-buttons">
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-curl')" (click)="setEndpointActiveTab('login', 'login-curl')">
+              cURL
+            </button>
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-js')" (click)="setEndpointActiveTab('login', 'login-js')">
+              JavaScript
+            </button>
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-python')" (click)="setEndpointActiveTab('login', 'login-python')">
+              Python
+            </button>
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-php')" (click)="setEndpointActiveTab('login', 'login-php')">
+              PHP
+            </button>
+          </div>
+          <div class="code-content">
+            <!-- cURL -->
+            <pre id="login-curl" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-curl')"><code class="language-bash">{{codeExamples.login.curl}}</code></pre>
+          
+            <!-- JavaScript -->
+            <pre id="login-js" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-js')"><code class="language-javascript">{{codeExamples.login.js}}</code></pre>
+          
+            <!-- Python -->
+            <pre id="login-python" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-python')"><code class="language-python">{{codeExamples.login.python}}</code></pre>
+          
+            <!-- PHP -->
+            <pre id="login-php" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-php')"><code class="language-php">{{codeExamples.login.php}}</code></pre>
+          </div>
+        </div>
+
+        <h3 class="section-title">Response Sample</h3>
+        <div class="response-sample">
+          <pre [innerHTML]="formatJson(apiResponses['login'] || 'Execute the request to see the response')"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Profile API section -->
+    <section id="profile" class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/user/validate-token</span>
+      </div>
+      <h2 class="endpoint-title">Profile API</h2>
+      <div class="endpoint-description">
+        <p>
+          Retrieve the authenticated user's profile details including name,
+          contact information, and wallet balance.
+        </p>
+      </div>
+
+      <div class="code-section">
+        <h3 class="section-title">Example Request</h3>
+        <div class="code-editor">
+          <div class="editor-header">
+            <div class="editor-title">PROFILE REQUEST</div>
+            <div class="editor-actions">
+              <button class="try-btn" (click)="tryApiRequest('profile')">Try It</button>
+              <button class="copy-btn" data-copy="profile-curl" (click)="copyCode('profile-curl')">Copy</button>
+            </div>
+          </div>
+          <div class="tab-buttons">
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('profile', 'profile-curl')" (click)="setEndpointActiveTab('profile', 'profile-curl')">
+              cURL
+            </button>
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('profile', 'profile-js')" (click)="setEndpointActiveTab('profile', 'profile-js')">
+              JavaScript
+            </button>
+            <button class="tab-btn" [class.active]="isEndpointActiveTab('profile', 'profile-python')" (click)="setEndpointActiveTab('profile', 'profile-python')">
+              Python
+            </button>
+          </div>
+          <div class="code-content">
+            <!-- cURL -->
+            <pre id="profile-curl" class="tab-content" [class.active]="isEndpointActiveTab('profile', 'profile-curl')"><code class="language-bash">{{codeExamples.profile.curl}}</code></pre>
+          
+            <!-- JavaScript -->
+            <pre id="profile-js" class="tab-content" [class.active]="isEndpointActiveTab('profile', 'profile-js')"><code class="language-javascript">{{codeExamples.profile.js}}</code></pre>
+          
+            <!-- Python -->
+            <pre id="profile-python" class="tab-content" [class.active]="isEndpointActiveTab('profile', 'profile-python')"><code class="language-python">{{codeExamples.profile.python}}</code></pre>
+          </div>
+        </div>
+
+        <h3 class="section-title">Response Sample</h3>
+        <div class="response-sample">
+          <pre [innerHTML]="formatJson(apiResponses['profile'] || 'Execute the request to see the response')"></pre>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      <p>&copy; 2023 99Gift Platform. All rights reserved.</p>
+      <p>API Documentation version 2.1 - Last updated: August 1, 2023</p>
+    </div>
+  </div>
+</div>
