@@ -1,97 +1,143 @@
+<!-- Product List API section -->
 <app-sidebar></app-sidebar>
-<!-- Login API section -->
 <div class="documentation-container">
-    <div class="main-content">
-<section id="login" class="endpoint">
-    <div class="endpoint-header">
-      <span class="method post">POST</span>
-      <span class="path">/user/login-Corporate/merchant</span>
-    </div>
-    <h2 class="endpoint-title">Login API</h2>
-    <div class="endpoint-description">
-      <p>
-        Authenticate corporate merchants with their mobile number, password,
-        and a 2FA authentication code. Successful authentication returns a JWT
-        token for subsequent API calls.
-      </p>
-    </div>
+  <div class="main-content">
+    <section id="product-list" class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/list</span>
+      </div>
+      <h2 class="endpoint-title">Product List Global Search</h2>
+      <div class="endpoint-description">
+        <p>
+          Retrieve a list of available products with filtering and pagination options.
+          Token is not required but can be passed in the header for authenticated requests.
+        </p>
+      </div>
 
-    <h3 class="section-title">Request Attributes</h3>
-    <table>
-      <tr>
-        <th>Attribute</th>
-        <th>Type</th>
-        <th>Required</th>
-        <th>Description</th>
-        <th>Sample</th>
-      </tr>
-      <tr>
-        <td>mobile</td>
-        <td>string</td>
-        <td>Yes</td>
-        <td>Registered mobile number with country code (without + sign)</td>
-        <td>"9182XXXXX94"</td>
-      </tr>
-      <tr>
-        <td>password</td>
-        <td>string</td>
-        <td>Yes</td>
-        <td>Account password</td>
-        <td>"test123"</td>
-      </tr>
-      <tr>
-        <td>authcode</td>
-        <td>string</td>
-        <td>Yes</td>
-        <td>6-digit 2FA code from authenticator app</td>
-        <td>"128636"</td>
-      </tr>
-    </table>
+      <h3 class="section-title">Request Attributes</h3>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+          <th>Sample</th>
+        </tr>
+        <tr>
+          <td>search</td>
+          <td>string</td>
+          <td>No</td>
+          <td>The search term for brand name, product name, etc.</td>
+          <td>"bata"</td>
+        </tr>
+        <tr>
+          <td>filterBy</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>The field to filter the search results by (e.g., "title")</td>
+          <td>"title"</td>
+        </tr>
+        <tr>
+          <td>selectedCategories</td>
+          <td>array</td>
+          <td>No</td>
+          <td>An array of selected category IDs to filter the search results</td>
+          <td>[1,2,3]</td>
+        </tr>
+        <tr>
+          <td>pagination</td>
+          <td>object</td>
+          <td>Yes</td>
+          <td>Pagination details for the search results</td>
+          <td>See below</td>
+        </tr>
+      </table>
 
-    <div class="code-section">
-      <h3 class="section-title">Example Request</h3>
-      <div class="code-editor">
-        <div class="editor-header">
-          <div class="editor-title">LOGIN REQUEST</div>
-          <div class="editor-actions">
-            <button class="try-btn" (click)="tryApiRequest('login')">Try It</button>
-            <button class="copy-btn" data-copy="login-curl" (click)="copyCode('login-curl')">Copy</button>
+      <h4 class="subsection-title">Pagination Object</h4>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Sample</th>
+        </tr>
+        <tr>
+          <td>sortBy</td>
+          <td>string</td>
+          <td>The field to sort the results by (e.g., "id")</td>
+          <td>"id"</td>
+        </tr>
+        <tr>
+          <td>descending</td>
+          <td>boolean</td>
+          <td>Whether to sort the results in descending order</td>
+          <td>false</td>
+        </tr>
+        <tr>
+          <td>page</td>
+          <td>integer</td>
+          <td>The current page number for paginated results</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>rowsPerPage</td>
+          <td>integer</td>
+          <td>The number of rows (items) to display per page</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>rowsNumber</td>
+          <td>integer</td>
+          <td>The total number of rows (items) available</td>
+          <td>0</td>
+        </tr>
+      </table>
+
+      <div class="code-section">
+        <h3 class="section-title">Example Request</h3>
+        <div class="code-editor">
+          <div class="editor-header">
+            <div class="editor-title">PRODUCT LIST REQUEST</div>
+            <div class="editor-actions">
+              <button class="try-btn" (click)="executeCode()">Run Code</button>
+              <button class="reset-btn" (click)="resetCode()">Reset</button>
+            </div>
+          </div>
+          <div class="tab-buttons">
+            <button class="tab-btn" [class.active]="activeTab === 'curl'" (click)="setActiveTab('curl')">
+              cURL
+            </button>
+            <button class="tab-btn" [class.active]="activeTab === 'javascript'" (click)="setActiveTab('javascript')">
+              JavaScript
+            </button>
+            <button class="tab-btn" [class.active]="activeTab === 'python'" (click)="setActiveTab('python')">
+              Python
+            </button>
+            <button class="tab-btn" [class.active]="activeTab === 'php'" (click)="setActiveTab('php')">
+              PHP
+            </button>
+          </div>
+          <div class="code-content">
+            <div #editorContainer class="editor-container"></div>
           </div>
         </div>
-        <div class="tab-buttons">
-          <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-curl')" (click)="setEndpointActiveTab('login', 'login-curl')">
-            cURL
-          </button>
-          <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-js')" (click)="setEndpointActiveTab('login', 'login-js')">
-            JavaScript
-          </button>
-          <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-python')" (click)="setEndpointActiveTab('login', 'login-python')">
-            Python
-          </button>
-          <button class="tab-btn" [class.active]="isEndpointActiveTab('login', 'login-php')" (click)="setEndpointActiveTab('login', 'login-php')">
-            PHP
-          </button>
-        </div>
-        <div class="code-content">
-          <!-- cURL -->
-          <pre id="login-curl" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-curl')"><code class="language-bash">{{codeExamples.login.curl}}</code></pre>
-        
-          <!-- JavaScript -->
-          <pre id="login-js" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-js')"><code class="language-javascript">{{codeExamples.login.js}}</code></pre>
-        
-          <!-- Python -->
-          <pre id="login-python" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-python')"><code class="language-python">{{codeExamples.login.python}}</code></pre>
-        
-          <!-- PHP -->
-          <pre id="login-php" class="tab-content" [class.active]="isEndpointActiveTab('login', 'login-php')"><code class="language-php">{{codeExamples.login.php}}</code></pre>
-        </div>
-      </div>
 
-      <h3 class="section-title">Response Sample</h3>
-      <div class="response-sample">
-        <pre [innerHTML]="formatJson(apiResponses['login'] || 'Execute the request to see the response')"></pre>
+        <h3 class="section-title">Response</h3>
+        <div class="response-sample">
+          <div class="response-header">
+            <div class="response-status" [class.success]="responseStatus === 'success'"
+                                  [class.error]="responseStatus === 'error'">
+              {{ responseStatus === 'success' ? 'Success' : 
+                 responseStatus === 'error' ? 'Error' : 'Awaiting execution...' }}
+            </div>
+            <button class="copy-btn" (click)="copyResponse()">Copy</button>
+          </div>
+          <div class="response-content">
+            <pre [innerHTML]="formatJson(apiResponse || 'Execute the code to see the response')"></pre>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
-</div>
+    </section>
+  </div>
 </div>

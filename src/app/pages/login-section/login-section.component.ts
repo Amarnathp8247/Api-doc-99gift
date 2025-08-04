@@ -157,22 +157,108 @@ if ($response !== false) {
     this.responseStatus = '';
     this.apiResponse = 'Executing...';
 
-    setTimeout(() => {
-      this.responseStatus = 'success';
+    // Extract the JSON payload from the editor content
+    const editorContent = this.editor.getValue();
+    let payload: any;
+
+    try {
+      if (this.activeTab === 'curl') {
+        // Parse curl command to extract JSON payload
+        const jsonMatch = editorContent.match(/-d\s+'([^']+)'/);
+        if (jsonMatch && jsonMatch[1]) {
+          payload = JSON.parse(jsonMatch[1]);
+        } else {
+          throw new Error('Could not extract JSON payload from curl command');
+        }
+      } else if (this.activeTab === 'javascript') {
+        // Parse JavaScript code to extract payload
+        const jsonMatch = editorContent.match(/const loginData = ({[^}]+})/);
+        if (jsonMatch && jsonMatch[1]) {
+          // Simple approach - in real app you might want a more robust parser
+          payload = eval(`(${jsonMatch[1]})`);
+        } else {
+          throw new Error('Could not extract payload from JavaScript code');
+        }
+      } else if (this.activeTab === 'python') {
+        // Parse Python code to extract payload
+        const jsonMatch = editorContent.match(/login_data = ({[^}]+})/);
+        if (jsonMatch && jsonMatch[1]) {
+          // Convert Python dict syntax to JSON
+          const pythonDict = jsonMatch[1]
+            .replace(/'/g, '"')  // Replace single quotes with double quotes
+            .replace(/True/g, 'true')  // Convert Python booleans
+            .replace(/False/g, 'false');
+          payload = JSON.parse(pythonDict);
+        } else {
+          throw new Error('Could not extract payload from Python code');
+        }
+      } else if (this.activeTab === 'php') {
+        // Parse PHP code to extract payload
+        const jsonMatch = editorContent.match(/\$loginData = (\[[^\]]+\])/);
+        if (jsonMatch && jsonMatch[1]) {
+          // Convert PHP array syntax to JSON
+          const phpArray = jsonMatch[1]
+            .replace(/'/g, '"')  // Replace single quotes with double quotes
+            .replace(/=>/g, ':')  // Replace => with :
+            .replace(/\$[a-zA-Z_]+/g, '"$&"');  // Wrap variables in quotes
+          payload = JSON.parse(phpArray);
+        } else {
+          throw new Error('Could not extract payload from PHP code');
+        }
+      }
+
+      // Define the allowed mobile number
+      const ALLOWED_MOBILE = "9182XXXXX94";
+
+      // Check if the mobile number matches the allowed number
+      if (payload.mobile !== ALLOWED_MOBILE) {
+        this.responseStatus = 'error';
+        this.apiResponse = JSON.stringify({
+          status: false,
+          message: "Invalid API key or credentials",
+          data: null,
+          user_detail: null,
+          pagination: null
+        }, null, 2);
+        return;
+      }
+
+      // Mock the successful response for the allowed number
+      if (payload.mobile === ALLOWED_MOBILE) {
+        this.responseStatus = 'success';
+        this.apiResponse = JSON.stringify({
+          status: true,
+          message: "Login Success!",
+          data: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTEyODI4NzAsIm5iZiI6MTc1",
+          user_detail: {
+            id: 188699,
+            email: "corptest@99gift.in",
+            mobile: ALLOWED_MOBILE,
+            balance: 180.6,
+            name: "Test"
+          },
+          pagination: null
+        }, null, 2);
+        return;
+      }
+
+      // Default error response
+      this.responseStatus = 'error';
       this.apiResponse = JSON.stringify({
-        status: true,
-        message: "Login Success!",
-        data: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTEyODI4NzAsIm5iZiI6MTc1",
-        user_detail: {
-          id: 188699,
-          email: "corptest@99gift.in",
-          mobile: "9182XXXXX94",
-          balance: 180.6,
-          name: "Test"
-        },
+        status: false,
+        message: "Authentication failed",
+        data: null,
+        user_detail: null,
         pagination: null
       }, null, 2);
-    }, 1500);
+
+    } catch (error) {
+      this.responseStatus = 'error';
+      this.apiResponse = JSON.stringify({
+        error: 'Failed to parse code',
+        details: error instanceof Error ? error.message : 'Unknown parsing error'
+      }, null, 2);
+    }
   }
 
   resetCode(): void {

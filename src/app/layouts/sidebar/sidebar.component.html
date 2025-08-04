@@ -1,52 +1,70 @@
-<!-- Sidebar Navigation -->
-<div class="sidebar">
-    <div class="logo-container">
-      <div class="logo">99Gift API <span>v2.1</span></div>
-    </div>
-  
-    <ul class="nav-menu">
-      <div class="nav-section">Introduction</div>
-      <li class="nav-item"><a href="#overview" class="nav-link">Overview</a></li>
-      <li class="nav-item"><a href="#authentication" class="nav-link">Authentication</a></li>
-      <li class="nav-item"><a href="#encryption" class="nav-link">CryptoJS Encryption</a></li>
-  
-      <div class="nav-section">Authentication APIs</div>
-      <li class="nav-item">
-        <a routerLink="/login-api" routerLinkActive="active" class="nav-link">Login API</a>
-      </li>
-  
-      <div class="nav-section">Product APIs</div>
-      <li class="nav-item">
-        <a routerLink="/product-list-api" routerLinkActive="active" class="nav-link">Product List</a>
-      </li>
-      <li class="nav-item">
-        <a routerLink="/product-search-api" routerLinkActive="active" class="nav-link">Product Search</a>
-      </li>
-      <li class="nav-item">
-        <a routerLink="/product-details-api" routerLinkActive="active" class="nav-link">Product Detail</a>
-      </li>
-  
-      <div class="nav-section">Order APIs</div>
-      <li class="nav-item">
-        <a routerLink="/order-place-api" routerLinkActive="active" class="nav-link">Order Place</a>
-      </li>
-      <li class="nav-item">
-        <a routerLink="/order-report-api" routerLinkActive="active" class="nav-link">Order Reports</a>
-      </li>
-      <li class="nav-item">
-        <a routerLink="/voucher-status-api" routerLinkActive="active" class="nav-link">Voucher Status</a>
-      </li>
-      <li class="nav-item">
-        <a routerLink="/voucher-details-api" routerLinkActive="active" class="nav-link">Voucher Details</a>
-      </li>
-  
-      <div class="nav-section">Account APIs</div>
-      <li class="nav-item">
-        <a routerLink="/profile-api" routerLinkActive="active" class="nav-link">Profile</a>
-      </li>
-      <li class="nav-item">
-        <a routerLink="/wallet-statement-api" routerLinkActive="active" class="nav-link">Wallet Statement</a>
-      </li>
-    </ul>
+<div class="sidebar-wrapper" #sidebarWrapper>
+  <!-- Hamburger Button -->
+  <button class="hamburger" [class.is-x]="sidebarVisible" (click)="toggleSidebar()"
+      [attr.aria-expanded]="sidebarVisible" aria-label="Toggle Sidebar">
+      <span class="bar" [class.bar1-x]="sidebarVisible"></span>
+      <span class="bar" [class.bar2-x]="sidebarVisible"></span>
+      <span class="bar" [class.bar3-x]="sidebarVisible"></span>
+  </button>
+
+  <!-- Sidebar -->
+  <div class="sidebar" [class.active]="sidebarVisible">
+      <div class="logo-container">
+          <div class="logo">99Gift API <span>v2.1</span></div>
+      </div>
+
+      <ul class="nav-menu" (click)="closeSidebar()">
+          <div class="nav-section">Introduction</div>
+          <li class="nav-item">
+              <a routerLink="/overview" routerLinkActive="active" class="nav-link">Overview</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/authentication" routerLinkActive="active" class="nav-link">Authentication</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/encryption" routerLinkActive="active" class="nav-link">CryptoJS Encryption</a>
+          </li>
+
+          <div class="nav-section">Authentication APIs</div>
+          <li class="nav-item">
+              <a routerLink="/login-api" routerLinkActive="active" class="nav-link">Login API</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/verify-otp-api" routerLinkActive="active" class="nav-link">Verify OTP & Get Token</a>
+          </li>
+
+          <div class="nav-section">Product APIs</div>
+          <li class="nav-item">
+              <a routerLink="/product-list-api" routerLinkActive="active" class="nav-link">Product List</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/product-search-api" routerLinkActive="active" class="nav-link">Product Search</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/product-details-api" routerLinkActive="active" class="nav-link">Product Detail</a>
+          </li>
+
+          <div class="nav-section">Order APIs</div>
+          <li class="nav-item">
+              <a routerLink="/order-place-api" routerLinkActive="active" class="nav-link">Order Place</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/order-report-api" routerLinkActive="active" class="nav-link">Order Reports</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/voucher-status-api" routerLinkActive="active" class="nav-link">Voucher Status</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/voucher-details-api" routerLinkActive="active" class="nav-link">Voucher Details</a>
+          </li>
+
+          <div class="nav-section">Account APIs</div>
+          <li class="nav-item">
+              <a routerLink="/profile-api" routerLinkActive="active" class="nav-link">Profile</a>
+          </li>
+          <li class="nav-item">
+              <a routerLink="/wallet-statement-api" routerLinkActive="active" class="nav-link">Wallet Statement</a>
+          </li>
+      </ul>
   </div>
-  
+</div>

@@ -1,18 +1,19 @@
 <app-sidebar></app-sidebar>
-<!-- Login API section -->
 <div class="documentation-container">
   <div class="main-content">
-    <section id="login" class="endpoint">
+    <section id="order-place" class="endpoint">
       <div class="endpoint-header">
-        <span class="method post">POST</span>
-        <span class="path">/user/login-Corporate/merchant</span>
+        <span class="method put">PUT</span>
+        <span class="path">/gift/order-create-corporate</span>
       </div>
-      <h2 class="endpoint-title">Login API</h2>
+      <h2 class="endpoint-title">Create Order</h2>
       <div class="endpoint-description">
         <p>
-          Authenticate corporate merchants with their mobile number, password,
-          and a 2FA authentication code. Successful authentication returns a JWT
-          token for subsequent API calls.
+          Create a new order for a corporate gift. The request payload must be encrypted using CryptoJS.
+          Token is required and must be passed in the header.
+        </p>
+        <p class="note">
+          <strong>Note:</strong> The actual payload should be encrypted and sent as a "data" field in the request.
         </p>
       </div>
 
@@ -26,25 +27,125 @@
           <th>Sample</th>
         </tr>
         <tr>
-          <td>mobile</td>
+          <td>customerName</td>
           <td>string</td>
           <td>Yes</td>
-          <td>Registered mobile number with country code (without + sign)</td>
-          <td>"9182XXXXX94"</td>
+          <td>The name of the customer making the purchase</td>
+          <td>"Joy Mathur"</td>
         </tr>
         <tr>
-          <td>password</td>
+          <td>emailID</td>
           <td>string</td>
           <td>Yes</td>
-          <td>Account password</td>
-          <td>"test123"</td>
+          <td>The email address of the customer</td>
+          <td>"joymathur&#64;gmail.com"</td>
         </tr>
         <tr>
-          <td>authcode</td>
+          <td>mobileNo</td>
           <td>string</td>
           <td>Yes</td>
-          <td>6-digit 2FA code from authenticator app</td>
-          <td>"128636"</td>
+          <td>The mobile number of the customer</td>
+          <td>"0123456789"</td>
+        </tr>
+        <tr>
+          <td>walletPayment</td>
+          <td>boolean</td>
+          <td>Yes</td>
+          <td>Indicates if the payment is made using a wallet</td>
+          <td>false</td>
+        </tr>
+        <tr>
+          <td>productId</td>
+          <td>integer</td>
+          <td>Yes</td>
+          <td>The unique identifier of the product being purchased</td>
+          <td>691</td>
+        </tr>
+        <tr>
+          <td>device_type</td>
+          <td>integer</td>
+          <td>Yes</td>
+          <td>The type of device used for the purchase (0 - Android, 1 - Mobile)</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>denominations</td>
+          <td>array</td>
+          <td>Yes</td>
+          <td>An array of objects containing details of the denominations being purchased</td>
+          <td>See below</td>
+        </tr>
+        <tr>
+          <td>corp_discount</td>
+          <td>float</td>
+          <td>No</td>
+          <td>Discount value for the corporate product</td>
+          <td>3.5</td>
+        </tr>
+        <tr>
+          <td>skuID</td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>The unique ID for the product</td>
+          <td>"OFFXXXGLENW"</td>
+        </tr>
+      </table>
+
+      <h4 class="subsection-title">Denominations Object</h4>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Sample</th>
+        </tr>
+        <tr>
+          <td>amount</td>
+          <td>integer</td>
+          <td>The amount of the denomination</td>
+          <td>5000</td>
+        </tr>
+        <tr>
+          <td>corp_discount</td>
+          <td>float</td>
+          <td>The discount applied to the denomination</td>
+          <td>3.5</td>
+        </tr>
+        <tr>
+          <td>quantity</td>
+          <td>integer</td>
+          <td>The quantity of the denomination being purchased</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>PRODUCTCODE</td>
+          <td>string</td>
+          <td>The product code for the denomination</td>
+          <td>"RELJ5000"</td>
+        </tr>
+        <tr>
+          <td>ProductGuid</td>
+          <td>string</td>
+          <td>The unique identifier for the product</td>
+          <td>"RELJ5000"</td>
+        </tr>
+        <tr>
+          <td>product_id</td>
+          <td>string</td>
+          <td>The unique identifier of the product</td>
+          <td>"691"</td>
+        </tr>
+        <tr>
+          <td>subproduct_id</td>
+          <td>integer</td>
+          <td>The unique identifier of the subproduct</td>
+          <td>1720</td>
+        </tr>
+        <tr>
+          <td>skuID</td>
+          <td>string</td>
+          <td>The unique ID for the product</td>
+          <td>"OFFXXXGLENW"</td>
         </tr>
       </table>
 
@@ -52,91 +153,44 @@
         <h3 class="section-title">Example Request</h3>
         <div class="code-editor">
           <div class="editor-header">
-            <div class="editor-title">LOGIN REQUEST</div>
+            <div class="editor-title">ORDER PLACE REQUEST</div>
             <div class="editor-actions">
-              <button class="try-btn" (click)="tryApiRequest('login')">
-                Try It
-              </button>
-              <button
-                class="copy-btn"
-                data-copy="login-curl"
-                (click)="copyCode('login-curl')"
-              >
-                Copy
-              </button>
+              <button class="try-btn" (click)="executeCode()">Run Code</button>
+              <button class="reset-btn" (click)="resetCode()">Reset</button>
             </div>
           </div>
           <div class="tab-buttons">
-            <button
-              class="tab-btn"
-              [class.active]="isEndpointActiveTab('login', 'login-curl')"
-              (click)="setEndpointActiveTab('login', 'login-curl')"
-            >
+            <button class="tab-btn" [class.active]="activeTab === 'curl'" (click)="setActiveTab('curl')">
               cURL
             </button>
-            <button
-              class="tab-btn"
-              [class.active]="isEndpointActiveTab('login', 'login-js')"
-              (click)="setEndpointActiveTab('login', 'login-js')"
-            >
+            <button class="tab-btn" [class.active]="activeTab === 'javascript'" (click)="setActiveTab('javascript')">
               JavaScript
             </button>
-            <button
-              class="tab-btn"
-              [class.active]="isEndpointActiveTab('login', 'login-python')"
-              (click)="setEndpointActiveTab('login', 'login-python')"
-            >
+            <button class="tab-btn" [class.active]="activeTab === 'python'" (click)="setActiveTab('python')">
               Python
             </button>
-            <button
-              class="tab-btn"
-              [class.active]="isEndpointActiveTab('login', 'login-php')"
-              (click)="setEndpointActiveTab('login', 'login-php')"
-            >
+            <button class="tab-btn" [class.active]="activeTab === 'php'" (click)="setActiveTab('php')">
               PHP
             </button>
           </div>
           <div class="code-content">
-            <!-- cURL -->
-            <pre
-              id="login-curl"
-              class="tab-content"
-              [class.active]="isEndpointActiveTab('login', 'login-curl')"
-            ><code class="language-bash">{{codeExamples.login.curl}}</code></pre>
-
-            <!-- JavaScript -->
-            <pre
-              id="login-js"
-              class="tab-content"
-              [class.active]="isEndpointActiveTab('login', 'login-js')"
-            ><code class="language-javascript">{{codeExamples.login.js}}</code></pre>
-
-            <!-- Python -->
-            <pre
-              id="login-python"
-              class="tab-content"
-              [class.active]="isEndpointActiveTab('login', 'login-python')"
-            ><code class="language-python">{{codeExamples.login.python}}</code></pre>
-
-            <!-- PHP -->
-            <pre
-              id="login-php"
-              class="tab-content"
-              [class.active]="isEndpointActiveTab('login', 'login-php')"
-            ><code class="language-php">{{codeExamples.login.php}}</code></pre>
+            <div #editorContainer class="editor-container"></div>
           </div>
         </div>
 
-        <h3 class="section-title">Response Sample</h3>
+        <h3 class="section-title">Response</h3>
         <div class="response-sample">
-          <pre
-            [innerHTML]="
-              formatJson(
-                apiResponses['login'] ||
-                  'Execute the request to see the response'
-              )
-            "
-          ></pre>
+          <div class="response-header">
+            <div class="response-status" [class.success]="responseStatus === 'success'"
+                                  [class.error]="responseStatus === 'error'">
+              {{ responseStatus === 'success' ? 'Success' : 
+                 responseStatus === 'error' ? 'Error' : 'Awaiting execution...' }}
+            </div>
+            <button class="copy-btn" (click)="copyResponse()">Copy</button>
+          </div>
+          <div class="response-content">
+            <pre [innerHTML]="formatJson(apiResponse || 'Execute the code to see the response')"></pre>
+          </div>
         </div>
       </div>
     </section>

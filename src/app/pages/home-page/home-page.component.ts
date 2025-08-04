@@ -1,34 +1,45 @@
-import { Component, AfterViewInit } from '@angular/core';
+import { Component, AfterViewInit, NgZone, OnDestroy } from '@angular/core';
 import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import CryptoJS from 'crypto-js';
-
-import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css';
-import javascript from 'highlight.js/lib/languages/javascript';
-import python from 'highlight.js/lib/languages/python';
-import php from 'highlight.js/lib/languages/php';
-import java from 'highlight.js/lib/languages/java';
+import * as monaco from 'monaco-editor';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, FormsModule , HttpClientModule],
+  imports: [CommonModule, SidebarComponent, FormsModule, HttpClientModule],
   templateUrl: './home-page.component.html',
   styleUrls: ['./home-page.component.scss']
 })
-export class HomePageComponent implements AfterViewInit {
+export class HomePageComponent implements AfterViewInit, OnDestroy {
   // Tab management
   activeTab: string = 'encryption-js';
   activeEndpointTab: { [key: string]: string } = {};
 
-// Code examples
-codeExamples = {
-  encryption: {
-    js: `// Using crypto-js library
+  // Monaco Editor options
+  editorOptions = {
+    theme: 'vs-dark',
+    language: 'javascript',
+    automaticLayout: true,
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    fontSize: 14,
+    lineNumbers: 'off',
+    roundedSelection: true,
+    scrollbar: {
+      vertical: 'hidden',
+      horizontal: 'hidden',
+      handleMouseWheel: true
+    }
+  };
+
+  // Code examples
+  codeExamples = {
+    encryption: {
+      js: `// Using crypto-js library
 const CryptoJS = require('crypto-js');
 
 // Configuration - these should come from environment variables in production
@@ -36,48 +47,48 @@ const SECRET_KEY = '12345678901234567890123456789012'; // 32 chars
 const IV = '1234567890123456'; // 16 chars
 
 function encryptData(data) {
-// Convert key and IV to CryptoJS format
-const key = CryptoJS.enc.Utf8.parse(SECRET_KEY);
-const iv = CryptoJS.enc.Utf8.parse(IV);
+  // Convert key and IV to CryptoJS format
+  const key = CryptoJS.enc.Utf8.parse(SECRET_KEY);
+  const iv = CryptoJS.enc.Utf8.parse(IV);
 
-// Stringify if data is an object
-const text = typeof data === 'string' ? data : JSON.stringify(data);
+  // Stringify if data is an object
+  const text = typeof data === 'string' ? data : JSON.stringify(data);
 
-// Encrypt using AES-256-CBC
-const encrypted = CryptoJS.AES.encrypt(text, key, {
-  iv: iv,
-  mode: CryptoJS.mode.CBC,
-  padding: CryptoJS.pad.Pkcs7
-});
+  // Encrypt using AES-256-CBC
+  const encrypted = CryptoJS.AES.encrypt(text, key, {
+    iv: iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7
+  });
 
-return encrypted.toString();
+  return encrypted.toString();
 }
 
 // Example usage:
 const orderData = {
-productId: 694,
-walletPayment: true,
-emailID: "test@99gift.in",
-mobileNo: "9182XXXXX94",
-customerName: "Test",
-denominations: [{
-  amount: 10,
-  corp_discount: 3,
-  quantity: 1,
-  product_id: "694",
-  subproduct_id: 1737,
-  PRODUCTCODE: "GOOL10",
-  ProductGuid: "GOOL10",
-  skuID: "OFFGOOGLENW"
-}]
+  productId: 694,
+  walletPayment: true,
+  emailID: "test@99gift.in",
+  mobileNo: "9182XXXXX94",
+  customerName: "Test",
+  denominations: [{
+    amount: 10,
+    corp_discount: 3,
+    quantity: 1,
+    product_id: "694",
+    subproduct_id: 1737,
+    PRODUCTCODE: "GOOL10",
+    ProductGuid: "GOOL10",
+    skuID: "OFFGOOGLENW"
+  }]
 };
 
 const encryptedPayload = {
-data: encryptData(orderData)
+  data: encryptData(orderData)
 };
 
 console.log("Encrypted Payload:", encryptedPayload);`,
-    python: `from Crypto.Cipher import AES
+      python: `from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 import base64
 import json
@@ -121,7 +132,7 @@ encrypted_payload = {
 }
 
 print("Encrypted Payload:", encrypted_payload)`,
-    php: `<?php
+      php: `<?php
 function encryptData($data, $key, $iv) {
   if (is_array($data)) {
       $text = json_encode($data);
@@ -172,7 +183,7 @@ $encryptedPayload = [
 echo "Encrypted Payload: ";
 print_r($encryptedPayload);
 ?>`,
-    java: `import javax.crypto.Cipher;
+      java: `import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -230,9 +241,9 @@ public class CryptoUtils {
       }
   }
 }`
-  },
-  login: {
-    curl: `curl -X POST \\
+    },
+    login: {
+      curl: `curl -X POST \\
 'https://api.99gift.in/user/login-Corporate/merchant' \\
 -H 'Content-Type: application/json' \\
 -d '{
@@ -240,28 +251,28 @@ public class CryptoUtils {
   "password": "test@123",
   "authcode": "128636"
 }'`,
-    js: `// Using Fetch API
+      js: `// Using Fetch API
 const loginData = {
-mobile: "9182XXXXX94",
-password: "test@123",
-authcode: "128636"
+  mobile: "9182XXXXX94",
+  password: "test@123",
+  authcode: "128636"
 };
 
 fetch('https://api.99gift.in/user/login-Corporate/merchant', {
-method: 'POST',
-headers: {
-  'Content-Type': 'application/json'
-},
-body: JSON.stringify(loginData)
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(loginData)
 })
 .then(response => response.json())
 .then(data => {
-console.log('Login successful:', data);
-// Store the JWT token for future requests
-localStorage.setItem('jwtToken', data.data);
+  console.log('Login successful:', data);
+  // Store the JWT token for future requests
+  localStorage.setItem('jwtToken', data.data);
 })
 .catch(error => console.error('Error:', error));`,
-    python: `import requests
+      python: `import requests
 
 login_data = {
   "mobile": "9182XXXXX94",
@@ -281,7 +292,7 @@ if response.status_code == 200:
   # Store the JWT token for future requests
 else:
   print("Login failed:", response.text)`,
-    php: `<?php
+      php: `<?php
 $loginData = [
   'mobile' => '9182XXXXX94',
   'password' => 'test@123',
@@ -313,24 +324,24 @@ if ($response !== false) {
   echo "Login failed";
 }
 ?>`
-  },
-  profile: {
-    curl: `curl -X GET \\
+    },
+    profile: {
+      curl: `curl -X GET \\
 'https://api.99gift.in/user/validate-token' \\
 -H 'Authorization: Bearer YOUR_JWT_TOKEN'`,
-    js: `// Using Fetch API with JWT from localStorage
+      js: `// Using Fetch API with JWT from localStorage
 const jwtToken = localStorage.getItem('jwtToken');
 
 fetch('https://api.99gift.in/user/validate-token', {
-method: 'GET',
-headers: {
-  'Authorization': \`Bearer \${jwtToken}\`
-}
+  method: 'GET',
+  headers: {
+    'Authorization': \`Bearer \${jwtToken}\`
+  }
 })
 .then(response => response.json())
 .then(data => console.log('Profile data:', data))
 .catch(error => console.error('Error:', error));`,
-    python: `import requests
+      python: `import requests
 
 jwt_token = "YOUR_JWT_TOKEN"  # Replace with actual token
 
@@ -343,8 +354,9 @@ if response.status_code == 200:
   print("Profile data:", response.json())
 else:
   print("Error:", response.text)`
-  }
-};
+    }
+  };
+
   // Encryption demo
   encryptionResult: string = '';
   showEncryptionResult: boolean = false;
@@ -381,23 +393,8 @@ else:
     iv: '1234567890123456'
   };
 
-  
-
-  constructor(
-    private http: HttpClient,
-    private sanitizer: DomSanitizer
-  ) {
-    // Initialize active tabs for each endpoint
-    this.endpoints.forEach(endpoint => {
-      this.activeEndpointTab[endpoint.id] = `${endpoint.id}-curl`;
-    });
-    
-    // Register languages for syntax highlighting
-    hljs.registerLanguage('javascript', javascript);
-    hljs.registerLanguage('python', python);
-    hljs.registerLanguage('php', php);
-    hljs.registerLanguage('java', java);
-  }
+  // Monaco Editor instances
+  editors: { [key: string]: monaco.editor.IStandaloneCodeEditor } = {};
 
   // Sample data for the documentation
   endpoints = [
@@ -407,19 +404,99 @@ else:
     { id: 'order-place', title: 'Order Place API', method: 'PUT', path: '/gift/order-create-corporate' }
   ];
 
+  constructor(
+    private http: HttpClient,
+    private sanitizer: DomSanitizer,
+    private zone: NgZone
+  ) {
+    // Initialize active tabs for each endpoint
+    this.endpoints.forEach(endpoint => {
+      this.activeEndpointTab[endpoint.id] = `${endpoint.id}-curl`;
+    });
+  }
+
   ngAfterViewInit() {
-    document.querySelectorAll('pre code').forEach((block) => {
-      hljs.highlightElement(block as HTMLElement);
+    this.initializeEditors();
+  }
+
+  ngOnDestroy() {
+    // Clean up Monaco editors
+    Object.values(this.editors).forEach(editor => editor.dispose());
+  }
+
+  initializeEditors() {
+    this.zone.runOutsideAngular(() => {
+      // Initialize editors for encryption examples
+      Object.keys(this.codeExamples.encryption).forEach(lang => {
+        const elementId = `encryption-${lang}`;
+        const container = document.getElementById(elementId);
+        if (container) {
+          this.editors[elementId] = monaco.editor.create(container, {
+            value: this.codeExamples.encryption[lang as keyof typeof this.codeExamples.encryption],
+            language: lang,
+            theme: 'vs-dark',
+            readOnly: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            fontSize: 13,
+            lineNumbers: 'off',
+            renderWhitespace: 'none',
+            scrollbar: {
+              vertical: 'hidden',
+              horizontal: 'hidden'
+            }
+          });
+        }
+      });
+
+      // Initialize editors for endpoint examples
+      ['login', 'profile'].forEach(endpoint => {
+        Object.keys(this.codeExamples[endpoint as keyof typeof this.codeExamples]).forEach(lang => {
+          const elementId = `${endpoint}-${lang}`;
+          const container = document.getElementById(elementId);
+          if (container) {
+            this.editors[elementId] = monaco.editor.create(container, {
+              value: (this.codeExamples[endpoint as keyof typeof this.codeExamples] as Record<string, string>)[lang],
+              language: lang === 'curl' ? 'shell' : lang,
+              theme: 'vs-dark',
+              readOnly: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              fontSize: 13,
+              lineNumbers: 'off',
+              renderWhitespace: 'none',
+              scrollbar: {
+                vertical: 'hidden',
+                horizontal: 'hidden'
+              }
+            });
+          }
+        });
+      });
     });
   }
 
   // Tab management methods
   setActiveTab(tabId: string): void {
     this.activeTab = tabId;
+    setTimeout(() => {
+      Object.keys(this.editors).forEach(key => {
+        if (key.startsWith(tabId.split('-')[0])) {
+          this.editors[key]?.layout();
+        }
+      });
+    }, 0);
   }
 
   setEndpointActiveTab(endpointId: string, tabId: string): void {
     this.activeEndpointTab[endpointId] = tabId;
+    setTimeout(() => {
+      Object.keys(this.editors).forEach(key => {
+        if (key.startsWith(endpointId)) {
+          this.editors[key]?.layout();
+        }
+      });
+    }, 0);
   }
 
   isActiveTab(tabId: string): boolean {
@@ -573,23 +650,26 @@ else:
   }
 
   copyCode(elementId: string): void {
-    const codeBlock = document.getElementById(elementId);
-    if (codeBlock) {
-      const range = document.createRange();
-      range.selectNode(codeBlock);
-      window.getSelection()?.removeAllRanges();
-      window.getSelection()?.addRange(range);
-      document.execCommand('copy');
-      window.getSelection()?.removeAllRanges();
+    const editor = this.editors[elementId];
+    if (editor) {
+      const code = editor.getValue();
+      navigator.clipboard.writeText(code).then(() => {
+        const copyButton = document.querySelector(`[data-copy="${elementId}"]`);
+        if (copyButton) {
+          const originalText = copyButton.textContent;
+          copyButton.textContent = 'Copied!';
+          setTimeout(() => {
+            if (copyButton) copyButton.textContent = originalText;
+          }, 2000);
+        }
+      });
+    }
+  }
 
-      const copyButton = document.querySelector(`[data-copy="${elementId}"]`);
-      if (copyButton) {
-        const originalText = copyButton.textContent;
-        copyButton.textContent = 'Copied!';
-        setTimeout(() => {
-          if (copyButton) copyButton.textContent = originalText;
-        }, 2000);
-      }
+  copyResponse(endpointId: string): void {
+    const response = this.apiResponses[endpointId];
+    if (response) {
+      navigator.clipboard.writeText(JSON.stringify(response, null, 2));
     }
   }
 

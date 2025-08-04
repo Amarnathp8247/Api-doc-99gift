@@ -22,6 +22,7 @@
     "highlight.js": "^11.11.1",
     "monaco-editor": "^0.52.2",
     "ngx-monaco-editor": "^12.0.0",
+    "ngx-monaco-editor-v2": "^20.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

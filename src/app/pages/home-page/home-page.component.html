@@ -3,7 +3,10 @@
   <div class="main-content">
     <!-- Overview section -->
     <section id="overview" class="api-header">
-      <h1 class="api-title">99Gift E-Commerce API Documentation</h1>
+      <div class="header-content">
+        <h1 class="api-title">99Gift E-Commerce API Documentation</h1>
+        <div class="version-badge">v2.1</div>
+      </div>
       <p class="api-description">
         Welcome to the 99Gift Platform API documentation. This comprehensive API
         suite enables seamless integration with our e-commerce platform,
@@ -13,32 +16,34 @@
 
       <div class="flow-diagram">
         <h3 class="section-title">API Integration Flow</h3>
-        <div class="flow-step">
-          <div class="flow-number">1</div>
-          <div class="flow-content">
-            <strong>Authentication</strong> - Obtain JWT token via Login API
-            with 2FA authentication
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-number">1</div>
+            <div class="flow-content">
+              <strong>Authentication</strong> - Obtain JWT token via Login API
+              with 2FA authentication
+            </div>
           </div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-number">2</div>
-          <div class="flow-content">
-            <strong>Product Catalog</strong> - Browse products using List and
-            Search APIs
+          <div class="flow-step">
+            <div class="flow-number">2</div>
+            <div class="flow-content">
+              <strong>Product Catalog</strong> - Browse products using List and
+              Search APIs
+            </div>
           </div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-number">3</div>
-          <div class="flow-content">
-            <strong>Order Placement</strong> - Create orders with encrypted
-            payload for sensitive data
+          <div class="flow-step">
+            <div class="flow-number">3</div>
+            <div class="flow-content">
+              <strong>Order Placement</strong> - Create orders with encrypted
+              payload for sensitive data
+            </div>
           </div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-number">4</div>
-          <div class="flow-content">
-            <strong>Order Management</strong> - Track order status and retrieve
-            voucher details
+          <div class="flow-step">
+            <div class="flow-number">4</div>
+            <div class="flow-content">
+              <strong>Order Management</strong> - Track order status and retrieve
+              voucher details
+            </div>
           </div>
         </div>
       </div>
@@ -46,6 +51,10 @@
 
     <!-- Authentication section -->
     <section id="authentication" class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/user/validate-token</span>
+      </div>
       <h2 class="endpoint-title">Authentication</h2>
       <div class="endpoint-description">
         <p>
@@ -57,26 +66,32 @@
       </div>
 
       <h3 class="section-title">Request Headers</h3>
-      <table>
-        <tr>
-          <th>Header</th>
-          <th>Required</th>
-          <th>Description</th>
-          <th>Example</th>
-        </tr>
-        <tr>
-          <td>Authorization</td>
-          <td>Yes</td>
-          <td>Bearer token received after authentication</td>
-          <td>Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</td>
-        </tr>
-        <tr>
-          <td>Content-Type</td>
-          <td>Yes</td>
-          <td>Should be application/json for most requests</td>
-          <td>application/json</td>
-        </tr>
-      </table>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Header</th>
+              <th>Required</th>
+              <th>Description</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Authorization</td>
+              <td>Yes</td>
+              <td>Bearer token received after authentication</td>
+              <td>Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</td>
+            </tr>
+            <tr>
+              <td>Content-Type</td>
+              <td>Yes</td>
+              <td>Should be application/json for most requests</td>
+              <td>application/json</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <!-- Encryption section -->
@@ -89,19 +104,21 @@
           before being sent to our API.
         </p>
 
-        <h3 class="section-title">Encryption Requirements</h3>
-        <ul style="margin: 15px 0 15px 20px">
-          <li>
-            <strong>Key:</strong> 32-character API secret provided during
-            production onboarding
-          </li>
-          <li>
-            <strong>IV:</strong> 16-character initialization vector (should be
-            random for each request)
-          </li>
-          <li><strong>Algorithm:</strong> AES-256-CBC</li>
-          <li><strong>Padding:</strong> PKCS7</li>
-        </ul>
+        <div class="encryption-requirements">
+          <h3 class="section-title">Encryption Requirements</h3>
+          <ul>
+            <li>
+              <strong>Key:</strong> 32-character API secret provided during
+              production onboarding
+            </li>
+            <li>
+              <strong>IV:</strong> 16-character initialization vector (should be
+              random for each request)
+            </li>
+            <li><strong>Algorithm:</strong> AES-256-CBC</li>
+            <li><strong>Padding:</strong> PKCS7</li>
+          </ul>
+        </div>
       </div>
 
       <div class="code-section">
@@ -152,61 +169,7 @@
       </div>
     </section>
 
-    
-    <!-- Profile API section -->
-    <section id="profile" class="endpoint">
-      <div class="endpoint-header">
-        <span class="method get">GET</span>
-        <span class="path">/user/validate-token</span>
-      </div>
-      <h2 class="endpoint-title">Profile API</h2>
-      <div class="endpoint-description">
-        <p>
-          Retrieve the authenticated user's profile details including name,
-          contact information, and wallet balance.
-        </p>
-      </div>
-
-      <div class="code-section">
-        <h3 class="section-title">Example Request</h3>
-        <div class="code-editor">
-          <div class="editor-header">
-            <div class="editor-title">PROFILE REQUEST</div>
-            <div class="editor-actions">
-              <button class="try-btn" (click)="tryApiRequest('profile')">Try It</button>
-              <button class="copy-btn" data-copy="profile-curl" (click)="copyCode('profile-curl')">Copy</button>
-            </div>
-          </div>
-          <div class="tab-buttons">
-            <button class="tab-btn" [class.active]="isEndpointActiveTab('profile', 'profile-curl')" (click)="setEndpointActiveTab('profile', 'profile-curl')">
-              cURL
-            </button>
-            <button class="tab-btn" [class.active]="isEndpointActiveTab('profile', 'profile-js')" (click)="setEndpointActiveTab('profile', 'profile-js')">
-              JavaScript
-            </button>
-            <button class="tab-btn" [class.active]="isEndpointActiveTab('profile', 'profile-python')" (click)="setEndpointActiveTab('profile', 'profile-python')">
-              Python
-            </button>
-          </div>
-          <div class="code-content">
-            <!-- cURL -->
-            <pre id="profile-curl" class="tab-content" [class.active]="isEndpointActiveTab('profile', 'profile-curl')"><code class="language-bash">{{codeExamples.profile.curl}}</code></pre>
-          
-            <!-- JavaScript -->
-            <pre id="profile-js" class="tab-content" [class.active]="isEndpointActiveTab('profile', 'profile-js')"><code class="language-javascript">{{codeExamples.profile.js}}</code></pre>
-          
-            <!-- Python -->
-            <pre id="profile-python" class="tab-content" [class.active]="isEndpointActiveTab('profile', 'profile-python')"><code class="language-python">{{codeExamples.profile.python}}</code></pre>
-          </div>
-        </div>
-
-        <h3 class="section-title">Response Sample</h3>
-        <div class="response-sample">
-          <pre [innerHTML]="formatJson(apiResponses['profile'] || 'Execute the request to see the response')"></pre>
-        </div>
-      </div>
-    </section>
-
+  
     <div class="footer">
       <p>&copy; 2023 99Gift Platform. All rights reserved.</p>
       <p>API Documentation version 2.1 - Last updated: August 1, 2023</p>

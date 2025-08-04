@@ -1,0 +1,103 @@
+.sidebar {
+    width: 250px;
+    background-color: #1a1a1a;
+    color: white;
+    height: 100vh;
+    overflow-y: auto;
+    position: fixed;
+    top: 0;
+    left: 0;
+    transition: transform 0.3s ease-in-out;
+    z-index: 1000;
+  
+    &.active {
+      transform: translateX(0);
+    }
+  
+    @media (max-width: 768px) {
+      transform: translateX(-100%);
+    }
+  }
+  
+  .logo-container {
+    padding: 1rem;
+    background-color: #111;
+  }
+  
+  .logo {
+    font-size: 20px;
+  
+    span {
+      font-size: 14px;
+      color: #aaa;
+    }
+  }
+  
+  .nav-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .nav-section {
+    padding: 1rem;
+    font-weight: bold;
+    color: #ccc;
+  }
+  
+  .nav-item {
+    padding: 0.5rem 1.5rem;
+  }
+  
+  .nav-link {
+    color: #eee;
+    text-decoration: none;
+  
+    &:hover {
+      color: #ffcc00;
+    }
+  }
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    background: #1a1a1a; // Default background for toggle
+  
+    @media (max-width: 768px) {
+      display: flex;
+    }
+  
+    .bar {
+      width: 25px;
+      height: 3px;
+      background-color: #fff;
+      transition: 0.3s ease;
+    }
+  
+    &.is-x {
+      background: transparent; // Remove background ONLY for X
+      left: 350px; // Optional: move to right when sidebar is open
+    }
+  
+    // Bar transforms
+    .bar1-x {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    .bar2-x {
+      opacity: 0;
+    }
+    .bar3-x {
+      transform: rotate(-45deg) translate(6px, -6px);
+    }
+  }
