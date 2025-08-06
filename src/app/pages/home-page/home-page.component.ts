@@ -4,20 +4,9 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import CryptoJS from 'crypto-js';
+import * as CryptoJS from 'crypto-js';
 
-// Declare Monaco types for CDN usage
 declare const monaco: any;
-
-interface MonacoEditor {
-  editor: {
-    create: (element: HTMLElement, options: any) => any;
-    IStandaloneCodeEditor: any;
-  };
-  languages: {
-    registerCompletionItemProvider: (languageId: string, provider: any) => void;
-  };
-}
 
 @Component({
   selector: 'app-home-page',
@@ -48,24 +37,324 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     }
   };
 
-  // Code examples (same as your original)
+  // Code examples
   codeExamples = {
     encryption: {
-      js: `// Using crypto-js library...`,
-      python: `from Crypto.Cipher import AES...`,
-      php: `<?php...`,
-      java: `import javax.crypto.Cipher...`
+      js: `// Using crypto-js library
+const CryptoJS = require('crypto-js');
+
+// Configuration - these should come from environment variables in production
+const SECRET_KEY = '12345678901234567890123456789012'; // 32 chars
+const IV = '1234567890123456'; // 16 chars
+
+function encryptData(data) {
+  // Convert key and IV to CryptoJS format
+  const key = CryptoJS.enc.Utf8.parse(SECRET_KEY);
+  const iv = CryptoJS.enc.Utf8.parse(IV);
+
+  // Stringify if data is an object
+  const text = typeof data === 'string' ? data : JSON.stringify(data);
+
+  // Encrypt using AES-256-CBC
+  const encrypted = CryptoJS.AES.encrypt(text, key, {
+    iv: iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7
+  });
+
+  return encrypted.toString();
+}
+
+// Example usage:
+const orderData = {
+  productId: 694,
+  walletPayment: true,
+  emailID: "test@99gift.in",
+  mobileNo: "9182XXXXX94",
+  customerName: "Test",
+  denominations: [{
+    amount: 10,
+    corp_discount: 3,
+    quantity: 1,
+    product_id: "694",
+    subproduct_id: 1737,
+    PRODUCTCODE: "GOOL10",
+    ProductGuid: "GOOL10",
+    skuID: "OFFGOOGLENW"
+  }]
+};
+
+const encryptedPayload = {
+  data: encryptData(orderData)
+};
+
+console.log("Encrypted Payload:", encryptedPayload);`,
+      python: `from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+import base64
+import json
+
+# Configuration - use environment variables in production
+SECRET_KEY = '12345678901234567890123456789012'  # 32 bytes
+IV = '1234567890123456'  # 16 bytes
+
+def encrypt_data(data):
+  if isinstance(data, dict):
+      text = json.dumps(data)
+  else:
+      text = str(data)
+
+  cipher = AES.new(SECRET_KEY.encode('utf-8'), AES.MODE_CBC, IV.encode('utf-8'))
+  padded_data = pad(text.encode('utf-8'), AES.block_size)
+  encrypted = cipher.encrypt(padded_data)
+
+  return base64.b64encode(encrypted).decode('utf-8')
+
+order_data = {
+  "productId": 694,
+  "walletPayment": True,
+  "emailID": "test@99gift.in",
+  "mobileNo": "9182XXXXX94",
+  "customerName": "Test",
+  "denominations": [{
+      "amount": 10,
+      "corp_discount": 3,
+      "quantity": 1,
+      "product_id": "694",
+      "subproduct_id": 1737,
+      "PRODUCTCODE": "GOOL10",
+      "ProductGuid": "GOOL10",
+      "skUID": "OFFGOOGLENW"
+  }]
+}
+
+encrypted_payload = {
+  "data": encrypt_data(order_data)
+}
+
+print("Encrypted Payload:", encrypted_payload)`,
+      php: `<?php
+function encryptData($data, $key, $iv) {
+  if (is_array($data)) {
+      $text = json_encode($data);
+  } else {
+      $text = (string)$data;
+  }
+
+  $blockSize = 16;
+  $pad = $blockSize - (strlen($text) % $blockSize);
+  $text = $text . str_repeat(chr($pad), $pad);
+
+  $encrypted = openssl_encrypt(
+      $text,
+      'AES-256-CBC',
+      $key,
+      OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+      $iv
+  );
+
+  return base64_encode($encrypted);
+}
+
+$secretKey = '12345678901234567890123456789012';
+$iv = '1234567890123456';
+
+$orderData = [
+  'productId' => 694,
+  'walletPayment' => true,
+  'emailID' => 'test@99gift.in',
+  'mobileNo' => '9182XXXXX94',
+  'customerName' => 'Test',
+  'denominations' => [[
+      'amount' => 10,
+      'corp_discount' => 3,
+      'quantity' => 1,
+      'product_id' => '694',
+      'subproduct_id' => 1737,
+      'PRODUCTCODE' => 'GOOL10',
+      'ProductGuid' => 'GOOL10',
+      'skUID' => 'OFFGOOGLENW'
+  ]]
+];
+
+$encryptedPayload = [
+  'data' => encryptData($orderData, $secretKey, $iv)
+];
+
+echo "Encrypted Payload: ";
+print_r($encryptedPayload);
+?>`,
+      java: `import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import org.json.JSONObject;
+
+public class CryptoUtils {
+  
+  private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
+  
+  public static String encryptData(String data, String key, String iv) throws Exception {
+      SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "AES");
+      IvParameterSpec ivSpec = new IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8));
+      
+      Cipher cipher = Cipher.getInstance(ALGORITHM);
+      cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
+      
+      byte[] encrypted = cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
+      
+      return Base64.getEncoder().encodeToString(encrypted);
+  }
+  
+  public static void main(String[] args) {
+      try {
+          String secretKey = "12345678901234567890123456789012";
+          String iv = "1234567890123456";
+
+          JSONObject orderData = new JSONObject();
+          orderData.put("productId", 694);
+          orderData.put("walletPayment", true);
+          orderData.put("emailID", "test@99gift.in");
+          orderData.put("mobileNo", "9182XXXXX94");
+          orderData.put("customerName", "Test");
+
+          JSONObject denomination = new JSONObject();
+          denomination.put("amount", 10);
+          denomination.put("corp_discount", 3);
+          denomination.put("quantity", 1);
+          denomination.put("product_id", "694");
+          denomination.put("subproduct_id", 1737);
+          denomination.put("PRODUCTCODE", "GOOL10");
+          denomination.put("ProductGuid", "GOOL10");
+          denomination.put("skUID", "OFFGOOGLENW");
+
+          orderData.put("denominations", new JSONObject[] {denomination});
+
+          String encryptedData = encryptData(orderData.toString(), secretKey, iv);
+
+          JSONObject encryptedPayload = new JSONObject();
+          encryptedPayload.put("data", encryptedData);
+
+          System.out.println("Encrypted Payload: " + encryptedPayload.toString());
+      } catch (Exception e) {
+          e.printStackTrace();
+      }
+  }
+}`
     },
     login: {
-      curl: `curl -X POST...`,
-      js: `// Using Fetch API...`,
-      python: `import requests...`,
-      php: `<?php...`
+      curl: `curl -X POST \\
+'https://api.99gift.in/user/login-Corporate/merchant' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "mobile": "9182XXXXX94",
+  "password": "test@123",
+  "authcode": "128636"
+}'`,
+      js: `// Using Fetch API
+const loginData = {
+  mobile: "9182XXXXX94",
+  password: "test@123",
+  authcode: "128636"
+};
+
+fetch('https://api.99gift.in/user/login-Corporate/merchant', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(loginData)
+})
+.then(response => response.json())
+.then(data => {
+  console.log('Login successful:', data);
+  // Store the JWT token for future requests
+  localStorage.setItem('jwtToken', data.data);
+})
+.catch(error => console.error('Error:', error));`,
+      python: `import requests
+
+login_data = {
+  "mobile": "9182XXXXX94",
+  "password": "test@123",
+  "authcode": "128636"
+}
+
+response = requests.post(
+  "https://api.99gift.in/user/login-Corporate/merchant",
+  json=login_data,
+  headers={"Content-Type": "application/json"}
+)
+
+if response.status_code == 200:
+  print("Login successful:", response.json())
+  jwt_token = response.json().get("data")
+  # Store the JWT token for future requests
+else:
+  print("Login failed:", response.text)`,
+      php: `<?php
+$loginData = [
+  'mobile' => '9182XXXXX94',
+  'password' => 'test@123',
+  'authcode' => '128636'
+];
+
+$options = [
+  'http' => [
+      'header' => "Content-Type: application/json\r\n",
+      'method' => 'POST',
+      'content' => json_encode($loginData)
+  ]
+];
+
+$context = stream_context_create($options);
+$response = file_get_contents(
+  'https://api.99gift.in/user/login-Corporate/merchant', 
+  false, 
+  $context
+);
+
+if ($response !== false) {
+  $responseData = json_decode($response, true);
+  echo "Login successful: ";
+  print_r($responseData);
+  // Store JWT token for future requests
+  $_SESSION['jwtToken'] = $responseData['data'];
+} else {
+  echo "Login failed";
+}
+?>`
     },
     profile: {
-      curl: `curl -X GET...`,
-      js: `// Using Fetch API...`,
-      python: `import requests...`
+      curl: `curl -X GET \\
+'https://api.99gift.in/user/validate-token' \\
+-H 'Authorization: Bearer YOUR_JWT_TOKEN'`,
+      js: `// Using Fetch API with JWT from localStorage
+const jwtToken = localStorage.getItem('jwtToken');
+
+fetch('https://api.99gift.in/user/validate-token', {
+  method: 'GET',
+  headers: {
+    'Authorization': \`Bearer \${jwtToken}\`
+  }
+})
+.then(response => response.json())
+.then(data => console.log('Profile data:', data))
+.catch(error => console.error('Error:', error));`,
+      python: `import requests
+
+jwt_token = "YOUR_JWT_TOKEN"  # Replace with actual token
+
+response = requests.get(
+  "https://api.99gift.in/user/validate-token",
+  headers={"Authorization": f"Bearer {jwt_token}"}
+)
+
+if response.status_code == 200:
+  print("Profile data:", response.json())
+else:
+  print("Error:", response.text)`
     }
   };
 
@@ -127,11 +416,15 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  ngAfterViewInit() {
+  ngAfterViewInit(): void {
     this.loadMonacoEditor();
   }
 
-  loadMonacoEditor() {
+  ngOnDestroy(): void {
+    this.disposeEditors();
+  }
+
+  private loadMonacoEditor(): void {
     if (typeof monaco !== 'undefined') {
       this.initializeEditors();
     } else {
@@ -144,19 +437,14 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
         });
       };
 
-      // Load AMD loader if needed
-      if (!(window as any).require) {
-        const loaderScript = document.createElement('script');
-        loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
-        loaderScript.addEventListener('load', onGotAmdLoader);
-        document.body.appendChild(loaderScript);
-      } else {
-        onGotAmdLoader();
-      }
+      const loaderScript = document.createElement('script');
+      loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
+      loaderScript.addEventListener('load', onGotAmdLoader);
+      document.body.appendChild(loaderScript);
     }
   }
 
-  initializeEditors() {
+  private initializeEditors(): void {
     this.zone.runOutsideAngular(() => {
       // Initialize editors for encryption examples
       Object.keys(this.codeExamples.encryption).forEach(lang => {
@@ -208,16 +496,16 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    // Clean up Monaco editors
+  private disposeEditors(): void {
     Object.values(this.editors).forEach(editor => {
       if (editor && typeof editor.dispose === 'function') {
         editor.dispose();
       }
     });
+    this.editors = {};
   }
 
-  // [Rest of your methods remain exactly the same...]
+  // Tab management methods
   setActiveTab(tabId: string): void {
     this.activeTab = tabId;
     setTimeout(() => {
@@ -248,6 +536,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     return this.activeEndpointTab[endpointId] === tabId;
   }
 
+  // Encryption methods
   encryptData(data: any): string {
     const key = CryptoJS.enc.Utf8.parse(this.encryptionConfig.secretKey);
     const iv = CryptoJS.enc.Utf8.parse(this.encryptionConfig.iv);
@@ -269,31 +558,41 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
       this.encryptionResult = JSON.stringify({ data: encrypted }, null, 2);
       this.showEncryptionResult = true;
     } catch (error) {
-      this.encryptionResult = `Encryption error: ${error}`;
+      this.encryptionResult = `Encryption error: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.showEncryptionResult = true;
     }
   }
 
+  // API demo methods
   tryApiRequest(endpointId: string): void {
     this.executingCode = true;
     this.apiResponses[endpointId] = 'Executing...';
 
     setTimeout(() => {
-      switch (endpointId) {
-        case 'login':
-          this.mockLoginRequest();
-          break;
-        case 'profile':
-          this.mockProfileRequest();
-          break;
-        case 'product-list':
-          this.mockProductListRequest();
-          break;
-        case 'order-place':
-          this.mockOrderPlaceRequest();
-          break;
+      try {
+        switch (endpointId) {
+          case 'login':
+            this.mockLoginRequest();
+            break;
+          case 'profile':
+            this.mockProfileRequest();
+            break;
+          case 'product-list':
+            this.mockProductListRequest();
+            break;
+          case 'order-place':
+            this.mockOrderPlaceRequest();
+            break;
+        }
+      } catch (error) {
+        this.apiResponses[endpointId] = {
+          status: false,
+          message: error instanceof Error ? error.message : 'Request failed',
+          data: null
+        };
+      } finally {
+        this.executingCode = false;
       }
-      this.executingCode = false;
     }, 1500);
   }
 
@@ -388,11 +687,12 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
     };
   }
 
-  copyCode(elementId: string): void {
+  async copyCode(elementId: string): Promise<void> {
     const editor = this.editors[elementId];
     if (editor) {
-      const code = editor.getValue();
-      navigator.clipboard.writeText(code).then(() => {
+      try {
+        const code = editor.getValue();
+        await navigator.clipboard.writeText(code);
         const copyButton = document.querySelector(`[data-copy="${elementId}"]`);
         if (copyButton) {
           const originalText = copyButton.textContent;
@@ -401,14 +701,20 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
             if (copyButton) copyButton.textContent = originalText;
           }, 2000);
         }
-      });
+      } catch (error) {
+        console.error('Failed to copy code:', error);
+      }
     }
   }
 
-  copyResponse(endpointId: string): void {
-    const response = this.apiResponses[endpointId];
-    if (response) {
-      navigator.clipboard.writeText(JSON.stringify(response, null, 2));
+  async copyResponse(endpointId: string): Promise<void> {
+    try {
+      const response = this.apiResponses[endpointId];
+      if (response) {
+        await navigator.clipboard.writeText(JSON.stringify(response, null, 2));
+      }
+    } catch (error) {
+      console.error('Failed to copy response:', error);
     }
   }
 
@@ -420,6 +726,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
         return this.sanitizer.bypassSecurityTrustHtml(json);
       }
     }
+    
     const formatted = JSON.stringify(json, null, 2)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -439,6 +746,7 @@ export class HomePageComponent implements AfterViewInit, OnDestroy {
         }
         return `<span class="${cls}">${match}</span>`;
       });
+    
     return this.sanitizer.bypassSecurityTrustHtml(formatted);
   }
 }

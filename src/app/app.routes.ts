@@ -16,6 +16,10 @@ export const routes: Routes = [
         path: '',
         component: HomePageComponent,
     },
+    {
+        path: 'overview',
+        component: HomePageComponent,
+    },
 
     {
         path: 'login-api',
