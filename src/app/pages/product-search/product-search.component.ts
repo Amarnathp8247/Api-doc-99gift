@@ -1,25 +1,26 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
-import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
 
+declare const monaco: any;
 @Component({
   selector: 'app-product-search',
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './product-search.component.html',
-  styleUrl: './product-search.component.scss'
+  styleUrls: ['./product-search.component.scss']
 })
-export class ProductSearchComponent implements AfterViewInit {
-  @ViewChild('editorContainer') editorContainer!: ElementRef;
-  
+export class ProductSearchComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('editorContainer', { static: false }) editorContainer!: ElementRef<HTMLElement>;
+
   activeTab: string = 'curl';
   responseStatus: string = '';
   apiResponse: string = '';
   editor: any;
+  
   editorOptions = {
     theme: 'vs-light',
     language: 'plaintext',
@@ -29,10 +30,25 @@ export class ProductSearchComponent implements AfterViewInit {
     fontSize: 14,
     lineNumbers: 'on',
     roundedSelection: true,
-    autoIndent: 'full'
+    autoIndent: 'full',
+    formatOnPaste: true,
+    formatOnType: true,
+    suggestOnTriggerCharacters: true,
+    wordBasedSuggestions: 'currentDocument',
+    quickSuggestions: true,
+    folding: true,
+    renderWhitespace: 'selection',
+    renderControlCharacters: false,
+    scrollbar: {
+      alwaysConsumeMouseWheel: false
+    },
+    hover: {
+      enabled: true,
+      delay: 300,
+      sticky: true
+    }
   };
 
-  // Default request payload with "Amazone" search
   defaultRequestPayload = {
     search: "Amazone",
     filterBy: "title",
@@ -46,7 +62,6 @@ export class ProductSearchComponent implements AfterViewInit {
     }
   };
 
-  // Default code samples
   defaultCodeSamples = {
     curl: `curl -X POST \\
 'https://api.99gift.in/list' \\
@@ -118,44 +133,93 @@ if ($response !== false) {
   ) {}
 
   ngAfterViewInit() {
-    this.initEditor();
+    this.initializeMonacoEditor();
   }
 
-  initEditor() {
-    this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
-      value: this.codeSamples.curl,
-      language: 'plaintext',
-      theme: 'vs-light',
-      automaticLayout: true,
-      minimap: { enabled: false }
-    });
+  ngOnDestroy() {
+    this.disposeEditor();
   }
 
-  setActiveTab(tab: string): void {
-    this.activeTab = tab;
-    if (this.editor) {
-      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
-      let language = 'plaintext';
-      switch(tab) {
-        case 'javascript': language = 'javascript'; break;
-        case 'python': language = 'python'; break;
-        case 'php': language = 'php'; break;
-      }
-      monaco.editor.setModelLanguage(this.editor.getModel(), language);
+  private initializeMonacoEditor() {
+    if (this.editorContainer) {
+      this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
+        value: this.codeSamples[this.activeTab as keyof typeof this.codeSamples],
+        ...this.editorOptions
+      });
+
+      this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        this.formatDocument();
+      });
+
+      this.setupLanguageFeatures();
     }
   }
 
-  executeCode(): void {
+  private disposeEditor() {
+    if (this.editor) {
+      this.editor.dispose();
+      this.editor = null;
+    }
+  }
+
+  private setupLanguageFeatures() {
+    monaco.languages.registerCompletionItemProvider('javascript', {
+      provideCompletionItems: (model: any, position: any) => {
+        const suggestions = [];
+        
+        suggestions.push({
+          label: 'list',
+          kind: monaco.languages.CompletionItemKind.Function,
+          documentation: 'Product search endpoint',
+          insertText: "'https://api.99gift.in/list'",
+          range: new monaco.Range(
+            position.lineNumber, 
+            position.column, 
+            position.lineNumber, 
+            position.column
+          )
+        });
+
+        return { suggestions };
+      }
+    });
+  }
+
+  formatDocument() {
+    if (this.editor) {
+      this.editor.getAction('editor.action.formatDocument')?.run();
+    }
+  }
+
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+    if (this.editor) {
+      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
+      
+      let language = 'plaintext';
+      switch (tab) {
+        case 'javascript': language = 'javascript'; break;
+        case 'python': language = 'python'; break;
+        case 'php': language = 'php'; break;
+        case 'curl': language = 'shell'; break;
+      }
+      
+      const model = this.editor.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+      }
+    }
+  }
+
+  executeCode() {
     this.responseStatus = '';
     this.apiResponse = 'Executing...';
 
-    // Extract the JSON payload from the editor content
-    const editorContent = this.editor.getValue();
-    let payload: any;
-
     try {
+      const editorContent = this.editor?.getValue() || '';
+      let payload: any;
+
       if (this.activeTab === 'curl') {
-        // Parse curl command to extract JSON payload
         const jsonMatch = editorContent.match(/-d\s+'([^']+)'/);
         if (jsonMatch && jsonMatch[1]) {
           payload = JSON.parse(jsonMatch[1]);
@@ -163,7 +227,6 @@ if ($response !== false) {
           throw new Error('Could not extract JSON payload from curl command');
         }
       } else if (this.activeTab === 'javascript') {
-        // Parse JavaScript code to extract payload
         const jsonMatch = editorContent.match(/const productListData = ({[^}]+})/);
         if (jsonMatch && jsonMatch[1]) {
           payload = eval(`(${jsonMatch[1]})`);
@@ -171,10 +234,8 @@ if ($response !== false) {
           throw new Error('Could not extract payload from JavaScript code');
         }
       } else if (this.activeTab === 'python') {
-        // Parse Python code to extract payload
         const jsonMatch = editorContent.match(/product_list_data = ({[^}]+})/);
         if (jsonMatch && jsonMatch[1]) {
-          // Convert Python dict syntax to JSON
           const pythonDict = jsonMatch[1]
             .replace(/'/g, '"')
             .replace(/True/g, 'true')
@@ -184,10 +245,8 @@ if ($response !== false) {
           throw new Error('Could not extract payload from Python code');
         }
       } else if (this.activeTab === 'php') {
-        // Parse PHP code to extract payload
         const jsonMatch = editorContent.match(/\$productListData = (\[[^\]]+\])/);
         if (jsonMatch && jsonMatch[1]) {
-          // Convert PHP array syntax to JSON
           const phpArray = jsonMatch[1]
             .replace(/'/g, '"')
             .replace(/=>/g, ':')
@@ -198,88 +257,108 @@ if ($response !== false) {
         }
       }
 
-      // Generate mock response based on the request payload
-      const searchTerm = payload.search?.toLowerCase() || '';
-      
-      // Check if search term is valid (only "amazone" or "amazon" allowed)
-      if (searchTerm !== 'amazone' && searchTerm !== 'amazon') {
-        this.responseStatus = 'error';
-        this.apiResponse = JSON.stringify({
-          status: false,
-          message: "Invalid API key or credentials",
-          data: null,
-          pagination: null
-        }, null, 2);
-        return;
-      }
+      // Simulate API delay
+      setTimeout(() => {
+        const searchTerm = payload.search?.toLowerCase() || '';
+        
+        // Check for valid search term (Amazon/Amazone)
+        if (!['amazon', 'amazone'].includes(searchTerm)) {
+          this.responseStatus = 'error';
+          this.apiResponse = JSON.stringify({
+            status: false,
+            message: "No products found matching your search",
+            data: [],
+            pagination: {
+              page: 1,
+              rowsPerPage: 0,
+              sortBy: "id",
+              descending: false,
+              total: 0
+            }
+          }, null, 2);
+          return;
+        }
 
-      const categoryFilter = payload.selectedCategories || [];
-      
-      // All available products
-      const allProducts = [
-        {
-          id: 695,
-          sku: "OFFAMAZONNW",
-          title: "Amazon Pay E-Gift Voucher",
-          image: "https://99paisa.s3.amazonaws.com/fund--request/amazon_voucher.jpg",
-          website: 1,
-          store: 0,
-          min_price: 100,
-          max_price: 1000,
-          discount_type: "percentage",
-          points: 0,
-          corp_discount: 5,
-          category: {
-            id: 6,
-            title: "Entertainment",
-            status: 1
+        const categoryFilter = payload.selectedCategories || [];
+        
+        // Mock product data
+        const allProducts = [
+          {
+            id: 695,
+            sku: "OFFAMAZONNW",
+            title: "Amazon Pay E-Gift Voucher",
+            image: "https://99paisa.s3.amazonaws.com/fund--request/amazon_voucher.jpg",
+            website: 1,
+            store: 0,
+            min_price: 100,
+            max_price: 1000,
+            discount_type: "percentage",
+            points: 0,
+            corp_discount: 5,
+            category: {
+              id: 6,
+              title: "Entertainment",
+              status: 1
+            }
           }
-        }
-      ];
+        ];
 
-      // Filter products based on search and category
-      const filteredProducts = allProducts.filter(product => {
-        const matchesSearch = product.title.toLowerCase().includes('amazon') || 
-                             product.sku.toLowerCase().includes('amazon');
+        // Filter products based on search and category
+        const filteredProducts = allProducts.filter(product => {
+          const matchesSearch = product.title.toLowerCase().includes('amazon') || 
+                              product.sku.toLowerCase().includes('amazon');
+          
+          const matchesCategory = categoryFilter.length === 0 || 
+            categoryFilter.includes(product.category.id);
+          
+          return matchesSearch && matchesCategory;
+        });
+
+        // Apply sorting
+        const sortBy: keyof typeof allProducts[0] = payload.pagination?.sortBy || "id";
+        const descending = payload.pagination?.descending || false;
         
-        const matchesCategory = categoryFilter.length === 0 || 
-          categoryFilter.includes(product.category.id);
-        
-        return matchesSearch && matchesCategory;
-      });
+        filteredProducts.sort((a, b) => {
+          if (a[sortBy] < b[sortBy]) return descending ? 1 : -1;
+          if (a[sortBy] > b[sortBy]) return descending ? -1 : 1; // Ensure sortBy is a valid key
+          return 0;
+        });
 
-      // Apply pagination
-      const pagination = payload.pagination || { page: 1, rowsPerPage: 0 };
-      const startIndex = (pagination.page - 1) * pagination.rowsPerPage;
-      const endIndex = startIndex + pagination.rowsPerPage;
-      const paginatedProducts = pagination.rowsPerPage > 0 ? 
-        filteredProducts.slice(startIndex, endIndex) : 
-        filteredProducts;
+        // Apply pagination
+        const pagination = payload.pagination || { page: 1, rowsPerPage: 0 };
+        const startIndex = (pagination.page - 1) * pagination.rowsPerPage;
+        const endIndex = startIndex + pagination.rowsPerPage;
+        const paginatedProducts = pagination.rowsPerPage > 0 ? 
+          filteredProducts.slice(startIndex, endIndex) : 
+          filteredProducts;
 
-      this.responseStatus = 'success';
-      this.apiResponse = JSON.stringify({
-        status: true,
-        message: "Product list retrieved successfully",
-        data: paginatedProducts,
-        pagination: {
-          page: pagination.page,
-          rowsPerPage: pagination.rowsPerPage,
-          sortBy: pagination.sortBy || "id",
-          descending: pagination.descending || false,
-          total: filteredProducts.length
-        }
-      }, null, 2);
+        this.responseStatus = 'success';
+        this.apiResponse = JSON.stringify({
+          status: true,
+          message: "Product list retrieved successfully",
+          data: paginatedProducts,
+          pagination: {
+            page: pagination.page,
+            rowsPerPage: pagination.rowsPerPage,
+            sortBy: sortBy,
+            descending: descending,
+            total: filteredProducts.length
+          }
+        }, null, 2);
+      }, 800);
 
     } catch (error) {
       this.responseStatus = 'error';
       this.apiResponse = JSON.stringify({
-        error: 'Failed to parse code',
-        details: error instanceof Error ? error.message : 'Unknown parsing error'
+        status: false,
+        message: "Invalid request format",
+        data: null,
+        pagination: null
       }, null, 2);
     }
   }
 
-  resetCode(): void {
+  resetCode() {
     this.codeSamples = {...this.defaultCodeSamples};
     if (this.editor) {
       this.editor.setValue(this.codeSamples[this.activeTab as keyof typeof this.codeSamples]);
@@ -288,22 +367,19 @@ if ($response !== false) {
     this.responseStatus = '';
   }
 
-  copyResponse(): void {
-    if (this.apiResponse) {
-      navigator.clipboard.writeText(this.apiResponse)
-        .then(() => {
-          const copyBtn = document.querySelector('.copy-btn');
-          if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-              if (copyBtn) copyBtn.textContent = originalText;
-            }, 2000);
-          }
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+  async copyResponse() {
+    try {
+      await navigator.clipboard.writeText(this.apiResponse);
+      const copyBtn = document.querySelector('.copy-btn');
+      if (copyBtn) {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          if (copyBtn) copyBtn.textContent = originalText;
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy: ', err);
     }
   }
 

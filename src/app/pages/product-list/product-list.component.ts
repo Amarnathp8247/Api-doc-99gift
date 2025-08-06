@@ -1,26 +1,27 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
-import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+
+declare const monaco: any;
 
 @Component({
   selector: 'app-product-list-docs',
   standalone: true,
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.scss']
 })
-export class ProductListComponent implements AfterViewInit {
-  @ViewChild('editorContainer') editorContainer!: ElementRef;
-  
+export class ProductListComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('editorContainer', { static: false }) editorContainer!: ElementRef<HTMLElement>;
+
   activeTab: string = 'curl';
   responseStatus: string = '';
   apiResponse: string = '';
-  editor: any;
+  editor:any;
+  
   editorOptions = {
     theme: 'vs-light',
     language: 'plaintext',
@@ -30,10 +31,25 @@ export class ProductListComponent implements AfterViewInit {
     fontSize: 14,
     lineNumbers: 'on',
     roundedSelection: true,
-    autoIndent: 'full'
+    autoIndent: 'full',
+    formatOnPaste: true,
+    formatOnType: true,
+    suggestOnTriggerCharacters: true,
+    wordBasedSuggestions: 'currentDocument',
+    quickSuggestions: true,
+    folding: true,
+    renderWhitespace: 'selection',
+    renderControlCharacters: false,
+    scrollbar: {
+      alwaysConsumeMouseWheel: false
+    },
+    hover: {
+      enabled: true,
+      delay: 300,
+      sticky: true
+    }
   };
 
-  // Default request payload
   defaultRequestPayload = {
     search: "",
     filterBy: "title",
@@ -47,7 +63,6 @@ export class ProductListComponent implements AfterViewInit {
     }
   };
 
-  // Default code samples
   defaultCodeSamples = {
     curl: `curl -X POST \\
 'https://api.99gift.in/list' \\
@@ -124,44 +139,93 @@ if ($response !== false) {
   ) {}
 
   ngAfterViewInit() {
-    this.initEditor();
+    this.initializeMonacoEditor();
   }
 
-  initEditor() {
-    this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
-      value: this.codeSamples.curl,
-      language: 'plaintext',
-      theme: 'vs-light',
-      automaticLayout: true,
-      minimap: { enabled: false }
-    });
+  ngOnDestroy() {
+    this.disposeEditor();
   }
 
-  setActiveTab(tab: string): void {
-    this.activeTab = tab;
-    if (this.editor) {
-      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
-      let language = 'plaintext';
-      switch(tab) {
-        case 'javascript': language = 'javascript'; break;
-        case 'python': language = 'python'; break;
-        case 'php': language = 'php'; break;
-      }
-      monaco.editor.setModelLanguage(this.editor.getModel(), language);
+  private initializeMonacoEditor() {
+    if (this.editorContainer) {
+      this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
+        value: this.codeSamples[this.activeTab as keyof typeof this.codeSamples],
+        ...this.editorOptions
+      });
+
+      this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        this.formatDocument();
+      });
+
+      this.setupLanguageFeatures();
     }
   }
 
-  executeCode(): void {
+  private disposeEditor() {
+    if (this.editor) {
+      this.editor.dispose();
+      this.editor = null;
+    }
+  }
+
+  private setupLanguageFeatures() {
+    monaco.languages.registerCompletionItemProvider('javascript', {
+      provideCompletionItems: (model: any, position: any)=> {
+        const suggestions = [];
+        
+        suggestions.push({
+          label: 'list',
+          kind: monaco.languages.CompletionItemKind.Function,
+          documentation: 'Product list endpoint',
+          insertText: "'https://api.99gift.in/list'",
+          range: new monaco.Range(
+            position.lineNumber, 
+            position.column, 
+            position.lineNumber, 
+            position.column
+          )
+        });
+
+        return { suggestions };
+      }
+    });
+  }
+
+  formatDocument() {
+    if (this.editor) {
+      this.editor.getAction('editor.action.formatDocument')?.run();
+    }
+  }
+
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+    if (this.editor) {
+      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
+      
+      let language = 'plaintext';
+      switch (tab) {
+        case 'javascript': language = 'javascript'; break;
+        case 'python': language = 'python'; break;
+        case 'php': language = 'php'; break;
+        case 'curl': language = 'shell'; break;
+      }
+      
+      const model = this.editor.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+      }
+    }
+  }
+
+  executeCode() {
     this.responseStatus = '';
     this.apiResponse = 'Executing...';
 
-    // Extract the JSON payload from the editor content
-    const editorContent = this.editor.getValue();
-    let payload: any;
-    let hasAuthHeader = false;
-
     try {
-      // Check for authorization header in all code samples
+      const editorContent = this.editor?.getValue() || '';
+      let payload: any;
+      let hasAuthHeader = false;
+
       if (this.activeTab === 'curl') {
         hasAuthHeader = editorContent.includes("Authorization: Bearer");
         const jsonMatch = editorContent.match(/-d\s+'([^']+)'/);
@@ -216,100 +280,112 @@ if ($response !== false) {
         return;
       }
 
-      // Generate mock response based on the request payload
-      const searchTerm = payload.search?.toLowerCase() || '';
-      const categoryFilter = payload.selectedCategories || [];
-      
-      const allProducts = [
-        {
-          id: 694,
-          sku: "OFFGOOGLENW",
-          title: "Google Play E-Gift Voucher",
-          image: "https://99paisa.s3.amazonaws.com/fund--request/cQXcnF2zu4BXaWaD7UWXG3y5bZ7Ld5RmIgL13k2p.jpg",
-          website: 1,
-          store: 0,
-          min_price: 10,
-          max_price: 50,
-          discount_type: "percentage",
-          points: 0,
-          corp_discount: 3,
-          category: {
-            id: 6,
-            title: "Entertainment",
-            status: 1
-          }
-        },
-        {
-          id: 695,
-          sku: "OFFAMAZONNW",
-          title: "Amazon Pay E-Gift Voucher",
-          image: "https://99paisa.s3.amazonaws.com/fund--request/amazon_voucher.jpg",
-          website: 1,
-          store: 0,
-          min_price: 100,
-          max_price: 1000,
-          discount_type: "percentage",
-          points: 0,
-          corp_discount: 5,
-          category: {
-            id: 6,
-            title: "Entertainment",
-            status: 1
-          }
-        },
-        {
-          id: 696,
-          sku: "FLIPKARTGV",
-          title: "Flipkart Gift Voucher",
-          image: "https://99paisa.s3.amazonaws.com/fund--request/flipkart_voucher.jpg",
-          website: 1,
-          store: 0,
-          min_price: 500,
-          max_price: 5000,
-          discount_type: "percentage",
-          points: 0,
-          corp_discount: 4,
-          category: {
-            id: 7,
-            title: "Shopping",
-            status: 1
-          }
-        }
-      ];
-
-      // Filter products based on search and category
-      const filteredProducts = allProducts.filter(product => {
-        const matchesSearch = searchTerm === '' || 
-          product.title.toLowerCase().includes(searchTerm) || 
-          product.sku.toLowerCase().includes(searchTerm);
+      // Simulate API delay
+      setTimeout(() => {
+        const searchTerm = payload.search?.toLowerCase() || '';
+        const categoryFilter = payload.selectedCategories || [];
         
-        const matchesCategory = categoryFilter.length === 0 || 
-          categoryFilter.includes(product.category.id);
+        const allProducts = [
+          {
+            id: 694,
+            sku: "OFFGOOGLENW",
+            title: "Google Play E-Gift Voucher",
+            image: "https://99paisa.s3.amazonaws.com/fund--request/cQXcnF2zu4BXaWaD7UWXG3y5bZ7Ld5RmIgL13k2p.jpg",
+            website: 1,
+            store: 0,
+            min_price: 10,
+            max_price: 50,
+            discount_type: "percentage",
+            points: 0,
+            corp_discount: 3,
+            category: {
+              id: 6,
+              title: "Entertainment",
+              status: 1
+            }
+          },
+          {
+            id: 695,
+            sku: "OFFAMAZONNW",
+            title: "Amazon Pay E-Gift Voucher",
+            image: "https://99paisa.s3.amazonaws.com/fund--request/amazon_voucher.jpg",
+            website: 1,
+            store: 0,
+            min_price: 100,
+            max_price: 1000,
+            discount_type: "percentage",
+            points: 0,
+            corp_discount: 5,
+            category: {
+              id: 6,
+              title: "Entertainment",
+              status: 1
+            }
+          },
+          {
+            id: 696,
+            sku: "FLIPKARTGV",
+            title: "Flipkart Gift Voucher",
+            image: "https://99paisa.s3.amazonaws.com/fund--request/flipkart_voucher.jpg",
+            website: 1,
+            store: 0,
+            min_price: 500,
+            max_price: 5000,
+            discount_type: "percentage",
+            points: 0,
+            corp_discount: 4,
+            category: {
+              id: 7,
+              title: "Shopping",
+              status: 1
+            }
+          }
+        ];
+
+        // Filter products based on search and category
+        const filteredProducts = allProducts.filter(product => {
+          const matchesSearch = searchTerm === '' || 
+            product.title.toLowerCase().includes(searchTerm) || 
+            product.sku.toLowerCase().includes(searchTerm);
+          
+          const matchesCategory = categoryFilter.length === 0 || 
+            categoryFilter.includes(product.category.id);
+          
+          return matchesSearch && matchesCategory;
+        });
+
+        // Apply sorting
+        const sortBy: keyof typeof allProducts[0] = payload.pagination?.sortBy as keyof typeof allProducts[0] || "id";
+        const descending = payload.pagination?.descending || false;
         
-        return matchesSearch && matchesCategory;
-      });
+        filteredProducts.sort((a, b) => {
+          if (a[sortBy] < b[sortBy]) return descending ? 1 : -1; // Ensure sortBy is a valid key
+          if (a[sortBy] > b[sortBy]) return descending ? -1 : 1;
+          return 0;
+        });
 
-      // Apply pagination
-      const pagination = payload.pagination || { page: 1, rowsPerPage: 0 };
-      const startIndex = (pagination.page - 1) * pagination.rowsPerPage;
-      const endIndex = startIndex + pagination.rowsPerPage;
-      const paginatedProducts = pagination.rowsPerPage > 0 ? 
-        filteredProducts.slice(startIndex, endIndex) : 
-        filteredProducts;
+        // Apply pagination
+        const pagination = payload.pagination || { page: 1, rowsPerPage: 0 };
+        const startIndex = (pagination.page - 1) * pagination.rowsPerPage;
+        const endIndex = startIndex + pagination.rowsPerPage;
+        const paginatedProducts = pagination.rowsPerPage > 0 ? 
+          filteredProducts.slice(startIndex, endIndex) : 
+          filteredProducts;
 
-      this.responseStatus = 'success';
-      this.apiResponse = JSON.stringify({
-        status: true,
-        message: "Product list retrieved successfully",
-        data: paginatedProducts,
-        pagination: {
-          page: pagination.page,
-          rowsPerPage: pagination.rowsPerPage,
-          sortBy: pagination.sortBy || "id",
-          descending: pagination.descending || false,
-          total: filteredProducts.length
-        }
-      }, null, 2);
+        this.responseStatus = 'success';
+        this.apiResponse = JSON.stringify({
+          status: true,
+          message: "Product list retrieved successfully",
+          data: paginatedProducts,
+          pagination: {
+            page: pagination.page,
+            rowsPerPage: pagination.rowsPerPage,
+            sortBy: sortBy,
+            descending: descending,
+            total: filteredProducts.length
+          }
+        }, null, 2);
+      }, 800);
 
     } catch (error) {
       this.responseStatus = 'error';
@@ -322,31 +398,29 @@ if ($response !== false) {
     }
   }
 
-  resetCode(): void {
+  resetCode() {
     this.codeSamples = {...this.defaultCodeSamples};
     if (this.editor) {
-      this.editor.setValue(this.codeSamples[this.activeTab as keyof typeof this.codeSamples]);
+      const activeTabKey = this.activeTab as keyof typeof this.codeSamples;
+      this.editor.setValue(this.codeSamples[activeTabKey]);
     }
     this.apiResponse = '';
     this.responseStatus = '';
   }
 
-  copyResponse(): void {
-    if (this.apiResponse) {
-      navigator.clipboard.writeText(this.apiResponse)
-        .then(() => {
-          const copyBtn = document.querySelector('.copy-btn');
-          if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-              if (copyBtn) copyBtn.textContent = originalText;
-            }, 2000);
-          }
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+  async copyResponse() {
+    try {
+      await navigator.clipboard.writeText(this.apiResponse);
+      const copyBtn = document.querySelector('.copy-btn');
+      if (copyBtn) {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          if (copyBtn) copyBtn.textContent = originalText;
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy: ', err);
     }
   }
 

@@ -1,26 +1,25 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
-import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+declare const monaco: any;
 @Component({
   selector: 'app-order-report',
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './order-report.component.html',
-  styleUrl: './order-report.component.scss'
+  styleUrls: ['./order-report.component.scss']
 })
-export class OrderReportComponent {
+export class OrderReportComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('editorContainer', { static: false }) editorContainer!: ElementRef<HTMLElement>;
 
-  @ViewChild('editorContainer') editorContainer!: ElementRef;
-  
   activeTab: string = 'curl';
   responseStatus: string = '';
   apiResponse: string = '';
   editor: any;
-  editorOptions = {
+  editorOptions = {  
     theme: 'vs-light',
     language: 'plaintext',
     minimap: { enabled: false },
@@ -29,10 +28,25 @@ export class OrderReportComponent {
     fontSize: 14,
     lineNumbers: 'on',
     roundedSelection: true,
-    autoIndent: 'full'
+    autoIndent: 'full',
+    formatOnPaste: true,
+    formatOnType: true,
+    suggestOnTriggerCharacters: true,
+    wordBasedSuggestions: 'currentDocument',
+    quickSuggestions: true,
+    folding: true,
+    renderWhitespace: 'selection',
+    renderControlCharacters: false,
+    scrollbar: {
+      alwaysConsumeMouseWheel: false
+    },
+    hover: {
+      enabled: true,
+      delay: 300,
+      sticky: true
+    }
   };
 
-  // Default request payload
   defaultRequestPayload = {
     search: null,
     filterBy: null,
@@ -50,7 +64,6 @@ export class OrderReportComponent {
     status: 0
   };
 
-  // Default code samples
   defaultCodeSamples = {
     curl: `curl -X POST \\
 'https://api.99gift.in/user/reports/0' \\
@@ -127,103 +140,119 @@ if ($response !== false) {
   ) {}
 
   ngAfterViewInit() {
-    this.initEditor();
+    this.initializeMonacoEditor();
   }
 
-  initEditor() {
-    this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
-      value: this.codeSamples.curl,
-      language: 'plaintext',
-      theme: 'vs-light',
-      automaticLayout: true,
-      minimap: { enabled: false }
-    });
+  ngOnDestroy() {
+    this.disposeEditor();
   }
 
-  setActiveTab(tab: string): void {
-    this.activeTab = tab;
-    if (this.editor) {
-      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
-      let language = 'plaintext';
-      switch(tab) {
-        case 'javascript': language = 'javascript'; break;
-        case 'python': language = 'python'; break;
-        case 'php': language = 'php'; break;
-      }
-      monaco.editor.setModelLanguage(this.editor.getModel(), language);
+  private initializeMonacoEditor() {
+    if (this.editorContainer && typeof monaco !== 'undefined') {
+      this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
+        value: this.codeSamples[this.activeTab as keyof typeof this.codeSamples],
+        ...this.editorOptions
+      });
+
+      this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        this.formatDocument();
+      });
+
+      this.setupLanguageFeatures();
     }
   }
 
-  executeCode(): void {
+  private disposeEditor() {
+    if (this.editor) {
+      this.editor.dispose();
+      this.editor = null;
+    }
+  }
+
+  private setupLanguageFeatures() {
+    if (monaco?.languages) {
+      monaco.languages.registerCompletionItemProvider('javascript', {
+        rovideCompletionItems: (model: any, position: any)  => {
+          return {
+            suggestions: [{
+              label: 'user/reports/0',
+              kind: monaco.languages.CompletionItemKind.Function,
+              documentation: 'Order reports endpoint',
+              insertText: "'https://api.99gift.in/user/reports/0'",
+              range: new monaco.Range(
+                position.lineNumber, 
+                position.column, 
+                position.lineNumber, 
+                position.column
+              )
+            }]
+          };
+        }
+      });
+    }
+  }
+
+  formatDocument() {
+    if (this.editor) {
+      this.editor.getAction('editor.action.formatDocument')?.run();
+    }
+  }
+
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+    const value = this.codeSamples[tab as keyof typeof this.codeSamples];
+    
+    if (this.editor) {
+      this.editor.setValue(value);
+      
+      let language = 'plaintext';
+      switch (tab) {
+        case 'javascript': language = 'javascript'; break;
+        case 'python': language = 'python'; break;
+        case 'php': language = 'php'; break;
+        case 'curl': language = 'shell'; break;
+      }
+      
+      const model = this.editor.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+      }
+    }
+  }
+
+  async executeCode() {
     this.responseStatus = '';
     this.apiResponse = 'Executing...';
-
-    // Extract the JSON payload from the editor content
-    const editorContent = this.editor.getValue();
+    const editorContent = this.editor?.getValue() || '';
     let payload: any;
 
     try {
       if (this.activeTab === 'curl') {
-        // Parse curl command to extract JSON payload
-        const jsonMatch = editorContent.match(/-d\s+'([^']+)'/);
-        if (jsonMatch && jsonMatch[1]) {
-          payload = JSON.parse(jsonMatch[1]);
-        } else {
-          throw new Error('Could not extract JSON payload from curl command');
-        }
+        const match = editorContent.match(/-d\s+'([^']+)'/);
+        if (!match) throw new Error('Invalid curl payload');
+        payload = JSON.parse(match[1]);
       } else if (this.activeTab === 'javascript') {
-        // Parse JavaScript code to extract payload
-        const jsonMatch = editorContent.match(/const reportData = ({[^}]+})/);
-        if (jsonMatch && jsonMatch[1]) {
-          payload = eval(`(${jsonMatch[1]})`);
-        } else {
-          throw new Error('Could not extract payload from JavaScript code');
-        }
+        const match = editorContent.match(/const reportData = ({[\s\S]*?})/);
+        if (!match) throw new Error('Invalid JS payload');
+        payload = eval(`(${match[1]})`);
       } else if (this.activeTab === 'python') {
-        // Parse Python code to extract payload
-        const jsonMatch = editorContent.match(/report_data = ({[^}]+})/);
-        if (jsonMatch && jsonMatch[1]) {
-          // Convert Python dict syntax to JSON
-          const pythonDict = jsonMatch[1]
-            .replace(/'/g, '"')
-            .replace(/True/g, 'true')
-            .replace(/False/g, 'false');
-          payload = JSON.parse(pythonDict);
-        } else {
-          throw new Error('Could not extract payload from Python code');
-        }
+        const match = editorContent.match(/report_data = ({[\s\S]*?})/);
+        if (!match) throw new Error('Invalid Python payload');
+        payload = JSON.parse(match[1].replace(/'/g, '"'));
       } else if (this.activeTab === 'php') {
-        // Parse PHP code to extract payload
-        const jsonMatch = editorContent.match(/\$reportData = (\[[^\]]+\])/);
-        if (jsonMatch && jsonMatch[1]) {
-          // Convert PHP array syntax to JSON
-          const phpArray = jsonMatch[1]
-            .replace(/'/g, '"')
-            .replace(/=>/g, ':')
-            .replace(/\$[a-zA-Z_]+/g, '"$&"');
-          payload = JSON.parse(phpArray);
-        } else {
-          throw new Error('Could not extract payload from PHP code');
-        }
+        const match = editorContent.match(/\$reportData = (\[[\s\S]*?\])/);
+        if (!match) throw new Error('Invalid PHP payload');
+        payload = JSON.parse(match[1].replace(/'/g, '"').replace(/=>/g, ':'));
       }
 
-      // Check for authorization header
-      const hasAuthHeader = editorContent.includes("Authorization: Bearer") || 
-                          editorContent.includes("'Authorization'") || 
-                          editorContent.includes('"Authorization"');
+      const hasAuth = editorContent.includes("Authorization: Bearer") || 
+                     editorContent.includes("'Authorization'") || 
+                     editorContent.includes('"Authorization"');
 
-      if (!hasAuthHeader) {
-        this.responseStatus = 'error';
-        this.apiResponse = JSON.stringify({
-          status: false,
-          message: "Authorization token is required",
-          data: null,
-          pagination: null
-        }, null, 2);
-        return;
-      }
+      if (!hasAuth) throw new Error('Authorization token is required');
 
-      // Generate mock response
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       this.responseStatus = 'success';
       this.apiResponse = JSON.stringify({
         status: true,
@@ -269,18 +298,18 @@ if ($response !== false) {
         }
       }, null, 2);
 
-    } catch (error) {
+    } catch (err) {
       this.responseStatus = 'error';
       this.apiResponse = JSON.stringify({
         status: false,
-        message: "Failed to fetch order reports",
+        message: (err instanceof Error ? err.message : 'Failed to fetch order reports'),
         data: null,
         pagination: null
       }, null, 2);
     }
   }
 
-  resetCode(): void {
+  resetCode() {
     this.codeSamples = {...this.defaultCodeSamples};
     if (this.editor) {
       this.editor.setValue(this.codeSamples[this.activeTab as keyof typeof this.codeSamples]);
@@ -289,22 +318,17 @@ if ($response !== false) {
     this.responseStatus = '';
   }
 
-  copyResponse(): void {
-    if (this.apiResponse) {
-      navigator.clipboard.writeText(this.apiResponse)
-        .then(() => {
-          const copyBtn = document.querySelector('.copy-btn');
-          if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-              if (copyBtn) copyBtn.textContent = originalText;
-            }, 2000);
-          }
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+  async copyResponse() {
+    try {
+      await navigator.clipboard.writeText(this.apiResponse);
+      const btn = document.querySelector('.copy-btn');
+      if (btn) {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = original || 'Copy', 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
     }
   }
 
@@ -318,11 +342,7 @@ if ($response !== false) {
         .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
           let cls = 'token number';
           if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-              cls = 'token key';
-            } else {
-              cls = 'token string';
-            }
+            cls = /:$/.test(match) ? 'token key' : 'token string';
           } else if (/true|false/.test(match)) {
             cls = 'token boolean';
           } else if (/null/.test(match)) {
@@ -331,7 +351,7 @@ if ($response !== false) {
           return `<span class="${cls}">${match}</span>`;
         });
       return this.sanitizer.bypassSecurityTrustHtml(formatted);
-    } catch (e) {
+    } catch {
       return this.sanitizer.bypassSecurityTrustHtml(json);
     }
   }

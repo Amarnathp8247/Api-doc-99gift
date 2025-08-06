@@ -4,12 +4,11 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+declare const monaco: any;
 
 @Component({
   selector: 'app-wallet-statement',
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './wallet-statement.component.html',
   styleUrl: './wallet-statement.component.scss'
 })

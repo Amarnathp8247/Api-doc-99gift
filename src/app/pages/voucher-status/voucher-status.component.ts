@@ -4,11 +4,10 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+declare const monaco: any;
 @Component({
   selector: 'app-voucher-status',
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './voucher-status.component.html',
   styleUrl: './voucher-status.component.scss'
 })

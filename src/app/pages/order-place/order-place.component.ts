@@ -1,25 +1,28 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
-import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+
+declare const monaco: any;
 
 @Component({
   selector: 'app-order-place',
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './order-place.component.html',
-  styleUrl: './order-place.component.scss'
+  styleUrls: ['./order-place.component.scss']
 })
-export class OrderPlaceComponent {
-  @ViewChild('editorContainer') editorContainer!: ElementRef;
-  
+export class OrderPlaceComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('editorContainer', { static: false }) editorContainer!: ElementRef<HTMLElement>;
+
   activeTab: string = 'curl';
   responseStatus: string = '';
   apiResponse: string = '';
   editor: any;
+  isMonacoLoaded = false;
+  
   editorOptions = {
     theme: 'vs-light',
     language: 'plaintext',
@@ -29,10 +32,25 @@ export class OrderPlaceComponent {
     fontSize: 14,
     lineNumbers: 'on',
     roundedSelection: true,
-    autoIndent: 'full'
+    autoIndent: 'full',
+    formatOnPaste: true,
+    formatOnType: true,
+    suggestOnTriggerCharacters: true,
+    wordBasedSuggestions: 'currentDocument',
+    quickSuggestions: true,
+    folding: true,
+    renderWhitespace: 'selection',
+    renderControlCharacters: false,
+    scrollbar: {
+      alwaysConsumeMouseWheel: false
+    },
+    hover: {
+      enabled: true,
+      delay: 300,
+      sticky: true
+    }
   };
 
-  // Default request payload
   defaultRequestPayload = {
     productId: 694,
     walletPayment: true,
@@ -57,7 +75,6 @@ export class OrderPlaceComponent {
     authcode: "98XX98"
   };
 
-  // Default code samples
   defaultCodeSamples = {
     curl: `curl -X PUT \\
 'https://api.99gift.in/gift/order-create-corporate' \\
@@ -89,7 +106,7 @@ order_data = ${JSON.stringify(this.defaultRequestPayload, null, 2)}
 
 response = requests.put(
   "https://api.99gift.in/gift/order-create-corporate",
-  json={"data": "ENCRYPTED_PAYLOAD"},  # Replace with encrypted payload
+  json={"data": "ENCRYPTED_PAYLOAD"},  // Replace with encrypted payload
   headers={
     "Content-Type": "application/json",
     "Authorization": "Bearer YOUR_API_TOKEN"
@@ -137,58 +154,144 @@ if ($response !== false) {
   ) {}
 
   ngAfterViewInit() {
-    this.initEditor();
+    this.loadMonacoEditor();
   }
 
-  initEditor() {
-    this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
-      value: this.codeSamples.curl,
-      language: 'plaintext',
-      theme: 'vs-light',
-      automaticLayout: true,
-      minimap: { enabled: false }
-    });
-  }
+  private loadMonacoEditor() {
+    if (typeof monaco !== 'undefined') {
+      this.initializeMonacoEditor();
+    } else {
+      const onGotAmdLoader = () => {
+        (window as any).require.config({
+          paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }
+        });
+        (window as any).require(['vs/editor/editor.main'], () => {
+          this.isMonacoLoaded = true;
+          this.initializeMonacoEditor();
+        });
+      };
 
-  setActiveTab(tab: string): void {
-    this.activeTab = tab;
-    if (this.editor) {
-      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
-      let language = 'plaintext';
-      switch(tab) {
-        case 'javascript': language = 'javascript'; break;
-        case 'python': language = 'python'; break;
-        case 'php': language = 'php'; break;
+      if (!document.querySelector('script[src*="monaco-editor"]')) {
+        const loaderScript = document.createElement('script');
+        loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
+        loaderScript.addEventListener('load', onGotAmdLoader);
+        document.body.appendChild(loaderScript);
+      } else {
+        onGotAmdLoader();
       }
-      monaco.editor.setModelLanguage(this.editor.getModel(), language);
     }
   }
 
-  executeCode(): void {
+  private initializeMonacoEditor() {
+    if (this.editorContainer && (this.isMonacoLoaded || typeof monaco !== 'undefined')) {
+      this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
+        value: this.codeSamples[this.activeTab as keyof typeof this.codeSamples],
+        ...this.editorOptions
+      });
+
+      this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        this.formatDocument();
+      });
+
+      this.setupLanguageFeatures();
+    }
+  }
+
+  ngOnDestroy() {
+    this.disposeEditor();
+  }
+
+  private disposeEditor() {
+    if (this.editor) {
+      this.editor.dispose();
+      this.editor = null;
+    }
+  }
+
+  private setupLanguageFeatures() {
+    if (monaco?.languages) {
+      monaco.languages.registerCompletionItemProvider('javascript', {
+        provideCompletionItems: (model: any, position: any) => {
+          return {
+            suggestions: [{
+              label: 'order-create-corporate',
+              kind: monaco.languages.CompletionItemKind.Function,
+              documentation: 'Corporate order creation endpoint',
+              insertText: "'https://api.99gift.in/gift/order-create-corporate'",
+              range: new monaco.Range(
+                position.lineNumber, 
+                position.column, 
+                position.lineNumber, 
+                position.column
+              )
+            }]
+          };
+        }
+      });
+    }
+  }
+
+  formatDocument() {
+    if (this.editor) {
+      this.editor.getAction('editor.action.formatDocument')?.run();
+    }
+  }
+
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+    const value = this.codeSamples[tab as keyof typeof this.codeSamples];
+    
+    if (this.editor) {
+      this.editor.setValue(value);
+      
+      let language = 'plaintext';
+      switch (tab) {
+        case 'javascript': language = 'javascript'; break;
+        case 'python': language = 'python'; break;
+        case 'php': language = 'php'; break;
+        case 'curl': language = 'shell'; break;
+      }
+      
+      const model = this.editor.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+      }
+    }
+  }
+
+  async executeCode() {
     this.responseStatus = '';
     this.apiResponse = 'Executing...';
+    const editorContent = this.editor?.getValue() || '';
+    let payload: any;
 
-    // In a real implementation, you would encrypt the payload here
-    // For demo purposes, we'll just use the mock response
     try {
-      // Check if authorization header is present
-      const editorContent = this.editor.getValue();
-      const hasAuthHeader = editorContent.includes("Authorization: Bearer") || 
-                          editorContent.includes("'Authorization'") || 
-                          editorContent.includes('"Authorization"');
-
-      if (!hasAuthHeader) {
-        this.responseStatus = 'error';
-        this.apiResponse = JSON.stringify({
-          status: false,
-          message: "Authorization token is required",
-          data: null,
-          pagination: null
-        }, null, 2);
-        return;
+      if (this.activeTab === 'curl') {
+        const match = editorContent.match(/-d\s+'([^']+)'/);
+        if (!match) throw new Error('Invalid curl payload');
+        payload = JSON.parse(match[1]);
+      } else if (this.activeTab === 'javascript') {
+        const match = editorContent.match(/const orderData = ({[\s\S]*?})/);
+        if (!match) throw new Error('Invalid JS payload');
+        payload = eval(`(${match[1]})`);
+      } else if (this.activeTab === 'python') {
+        const match = editorContent.match(/order_data = ({[\s\S]*?})/);
+        if (!match) throw new Error('Invalid Python payload');
+        payload = JSON.parse(match[1].replace(/'/g, '"'));
+      } else if (this.activeTab === 'php') {
+        const match = editorContent.match(/\$orderData = (\[[\s\S]*?\])/);
+        if (!match) throw new Error('Invalid PHP payload');
+        payload = JSON.parse(match[1].replace(/'/g, '"').replace(/=>/g, ':'));
       }
 
-      // Generate mock success response
+      const hasAuth = editorContent.includes("Authorization: Bearer") || 
+                     editorContent.includes("'Authorization'") || 
+                     editorContent.includes('"Authorization"');
+
+      if (!hasAuth) throw new Error('Authorization token is required');
+
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       this.responseStatus = 'success';
       this.apiResponse = JSON.stringify({
         status: true,
@@ -203,18 +306,18 @@ if ($response !== false) {
         pagination: null
       }, null, 2);
 
-    } catch (error) {
+    } catch (err) {
       this.responseStatus = 'error';
       this.apiResponse = JSON.stringify({
         status: false,
-        message: "Failed to process order",
+        message: (err instanceof Error ? err.message : 'Unknown error'),
         data: null,
         pagination: null
       }, null, 2);
     }
   }
 
-  resetCode(): void {
+  resetCode() {
     this.codeSamples = {...this.defaultCodeSamples};
     if (this.editor) {
       this.editor.setValue(this.codeSamples[this.activeTab as keyof typeof this.codeSamples]);
@@ -223,22 +326,17 @@ if ($response !== false) {
     this.responseStatus = '';
   }
 
-  copyResponse(): void {
-    if (this.apiResponse) {
-      navigator.clipboard.writeText(this.apiResponse)
-        .then(() => {
-          const copyBtn = document.querySelector('.copy-btn');
-          if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-              if (copyBtn) copyBtn.textContent = originalText;
-            }, 2000);
-          }
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+  async copyResponse() {
+    try {
+      await navigator.clipboard.writeText(this.apiResponse);
+      const btn = document.querySelector('.copy-btn');
+      if (btn) {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = original || 'Copy', 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
     }
   }
 
@@ -252,11 +350,7 @@ if ($response !== false) {
         .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
           let cls = 'token number';
           if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-              cls = 'token key';
-            } else {
-              cls = 'token string';
-            }
+            cls = /:$/.test(match) ? 'token key' : 'token string';
           } else if (/true|false/.test(match)) {
             cls = 'token boolean';
           } else if (/null/.test(match)) {
@@ -265,7 +359,7 @@ if ($response !== false) {
           return `<span class="${cls}">${match}</span>`;
         });
       return this.sanitizer.bypassSecurityTrustHtml(formatted);
-    } catch (e) {
+    } catch {
       return this.sanitizer.bypassSecurityTrustHtml(json);
     }
   }

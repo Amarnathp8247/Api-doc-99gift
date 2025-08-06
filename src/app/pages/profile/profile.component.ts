@@ -1,26 +1,27 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
-import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
+import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as monaco from 'monaco-editor';
-import { MonacoEditorModule } from 'ngx-monaco-editor';
+import { SidebarComponent } from "../../layouts/sidebar/sidebar.component";
 
+declare const monaco: any;
 
 @Component({
   selector: 'app-profile',
-  imports: [CommonModule, FormsModule, SidebarComponent, MonacoEditorModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './profile.component.html',
-  styleUrl: './profile.component.scss'
+  styleUrls: ['./profile.component.scss']
 })
-export class ProfileComponent {
-  @ViewChild('editorContainer') editorContainer!: ElementRef;
-  
+export class ProfileComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('editorContainer', { static: false }) editorContainer!: ElementRef<HTMLElement>;
+
   activeTab: string = 'curl';
   responseStatus: string = '';
   apiResponse: string = '';
-  editor: any;
+  editor:any;
+  
   editorOptions = {
     theme: 'vs-light',
     language: 'plaintext',
@@ -30,10 +31,25 @@ export class ProfileComponent {
     fontSize: 14,
     lineNumbers: 'on',
     roundedSelection: true,
-    autoIndent: 'full'
+    autoIndent: 'full',
+    formatOnPaste: true,
+    formatOnType: true,
+    suggestOnTriggerCharacters: true,
+    wordBasedSuggestions: 'currentDocument',
+    quickSuggestions: true,
+    folding: true,
+    renderWhitespace: 'selection',
+    renderControlCharacters: false,
+    scrollbar: {
+      alwaysConsumeMouseWheel: false
+    },
+    hover: {
+      enabled: true,
+      delay: 300,
+      sticky: true
+    }
   };
 
-  // Default code samples
   defaultCodeSamples = {
     curl: `curl -X GET \\
 'https://api.99gift.in/user/validate-token' \\
@@ -100,42 +116,92 @@ if ($response !== false) {
   ) {}
 
   ngAfterViewInit() {
-    this.initEditor();
+    this.initializeMonacoEditor();
   }
 
-  initEditor() {
-    this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
-      value: this.codeSamples.curl,
-      language: 'plaintext',
-      theme: 'vs-light',
-      automaticLayout: true,
-      minimap: { enabled: false }
-    });
+  ngOnDestroy() {
+    this.disposeEditor();
   }
 
-  setActiveTab(tab: string): void {
-    this.activeTab = tab;
-    if (this.editor) {
-      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
-      let language = 'plaintext';
-      switch(tab) {
-        case 'javascript': language = 'javascript'; break;
-        case 'python': language = 'python'; break;
-        case 'php': language = 'php'; break;
-      }
-      monaco.editor.setModelLanguage(this.editor.getModel(), language);
+  private initializeMonacoEditor() {
+    if (this.editorContainer) {
+      this.editor = monaco.editor.create(this.editorContainer.nativeElement, {
+        value: this.codeSamples[this.activeTab as keyof typeof this.codeSamples],
+        ...this.editorOptions
+      });
+
+      this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        this.formatDocument();
+      });
+
+      this.setupLanguageFeatures();
     }
   }
 
-  executeCode(): void {
+  private disposeEditor() {
+    if (this.editor) {
+      this.editor.dispose();
+      this.editor = null;
+    }
+  }
+
+  private setupLanguageFeatures() {
+    monaco.languages.registerCompletionItemProvider('javascript', {
+      provideCompletionItems: (model: any, position: any) => {
+        const suggestions = [];
+        
+        suggestions.push({
+          label: 'validate-token',
+          kind: monaco.languages.CompletionItemKind.Function,
+          documentation: 'Profile validation endpoint',
+          insertText: "'https://api.99gift.in/user/validate-token'",
+          range: new monaco.Range(
+            position.lineNumber, 
+            position.column, 
+            position.lineNumber, 
+            position.column
+          )
+        });
+
+        return { suggestions };
+      }
+    });
+  }
+
+  formatDocument() {
+    if (this.editor) {
+      this.editor.getAction('editor.action.formatDocument')?.run();
+    }
+  }
+
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+    if (this.editor) {
+      this.editor.setValue(this.codeSamples[tab as keyof typeof this.codeSamples]);
+      
+      let language = 'plaintext';
+      switch (tab) {
+        case 'javascript': language = 'javascript'; break;
+        case 'python': language = 'python'; break;
+        case 'php': language = 'php'; break;
+        case 'curl': language = 'shell'; break;
+      }
+      
+      const model = this.editor.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+      }
+    }
+  }
+
+  executeCode() {
     this.responseStatus = '';
     this.apiResponse = 'Executing...';
 
-    // Extract the authorization header from the editor content
-    const editorContent = this.editor.getValue();
-    let hasAuthHeader = false;
-
     try {
+      const editorContent = this.editor?.getValue() || '';
+      let hasAuthHeader = false;
+
       // Check for authorization header in all code samples
       if (this.activeTab === 'curl') {
         hasAuthHeader = editorContent.includes("Authorization: Bearer");
@@ -157,21 +223,23 @@ if ($response !== false) {
         return;
       }
 
-      // Generate mock response
-      this.responseStatus = 'success';
-      this.apiResponse = JSON.stringify({
-        status: true,
-        message: "User details!",
-        data: {
-          id: 12345,
-          name: "Amarnath",
-          mobile: "XXXXXXX",
-          email: "XXXX@99gift.in",
-          balance: 180.6,
-          corporate_name: null,
-          pin_code: null
-        }
-      }, null, 2);
+      // Simulate API delay
+      setTimeout(() => {
+        this.responseStatus = 'success';
+        this.apiResponse = JSON.stringify({
+          status: true,
+          message: "User details!",
+          data: {
+            id: 12345,
+            name: "Amarnath",
+            mobile: "XXXXXXX",
+            email: "XXXX@99gift.in",
+            balance: 180.6,
+            corporate_name: null,
+            pin_code: null
+          }
+        }, null, 2);
+      }, 800);
 
     } catch (error) {
       this.responseStatus = 'error';
@@ -183,7 +251,7 @@ if ($response !== false) {
     }
   }
 
-  resetCode(): void {
+  resetCode() {
     this.codeSamples = {...this.defaultCodeSamples};
     if (this.editor) {
       this.editor.setValue(this.codeSamples[this.activeTab as keyof typeof this.codeSamples]);
@@ -192,22 +260,19 @@ if ($response !== false) {
     this.responseStatus = '';
   }
 
-  copyResponse(): void {
-    if (this.apiResponse) {
-      navigator.clipboard.writeText(this.apiResponse)
-        .then(() => {
-          const copyBtn = document.querySelector('.copy-btn');
-          if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-              if (copyBtn) copyBtn.textContent = originalText;
-            }, 2000);
-          }
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+  async copyResponse() {
+    try {
+      await navigator.clipboard.writeText(this.apiResponse);
+      const copyBtn = document.querySelector('.copy-btn');
+      if (copyBtn) {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          if (copyBtn) copyBtn.textContent = originalText;
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy: ', err);
     }
   }
 
